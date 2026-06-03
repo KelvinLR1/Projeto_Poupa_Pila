@@ -1,0 +1,191 @@
+import React, { useState } from 'react';
+import { useFinance } from '../../context/FinanceContext';
+import { formatCurrency, formatDate } from '../../utils/formatters';
+import { GlassCard } from '../../components/ui/GlassCard';
+import { Badge } from '../../components/ui/Badge';
+import { Button } from '../../components/ui/Button';
+import { PaymentModal } from '../../components/ui/PaymentModal';
+import { TransactionDetailsModal } from '../../components/ui/TransactionDetailsModal';
+import { TransactionFormDrawer } from '../../components/ui/TransactionFormDrawer';
+import { ArrowUpRight, ArrowDownRight, Search, Filter, Plus, Check } from 'lucide-react';
+import './Transactions.css';
+
+export function Transactions({ filterAccountId, setFilterAccountId }) {
+  const { transactions, accounts, hideValues, markTransactionAsPaid } = useFinance();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState('all'); // 'all', 'payable', 'receivable'
+  const [selectedTxForPayment, setSelectedTxForPayment] = useState(null);
+  const [selectedTxForDetails, setSelectedTxForDetails] = useState(null);
+  const [isAddingTransaction, setIsAddingTransaction] = useState(false);
+
+  const handleConfirmPayment = ({ transaction, paidAmount }) => {
+    markTransactionAsPaid(transaction.id, paidAmount);
+    setSelectedTxForPayment(null);
+  };
+
+  const handlePayRemaining = (transaction) => {
+    setSelectedTxForDetails(null);
+    setSelectedTxForPayment(transaction);
+  };
+
+  const filteredTransactions = transactions.filter(tx => {
+    const matchesTab = activeTab === 'payable' ? (tx.type === 'expense' && tx.status === 'pending') :
+                       activeTab === 'receivable' ? (tx.type === 'income' && tx.status === 'pending') : true;
+    
+    const matchesAccount = filterAccountId === 'all' || tx.accountId === filterAccountId;
+    
+    const matchesSearch = tx.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          tx.category.toLowerCase().includes(searchTerm.toLowerCase());
+                          
+    return matchesTab && matchesAccount && matchesSearch;
+  });
+
+  return (
+    <div className="transactions-page">
+      <div className="page-header">
+        <div>
+          <h2 className="page-title">
+            {activeTab === 'all' && 'Extrato Global'}
+            {activeTab === 'payable' && 'Contas a Pagar'}
+            {activeTab === 'receivable' && 'Contas a Receber'}
+          </h2>
+          <p className="page-subtitle">Acompanhe todas as suas movimentações financeiras.</p>
+        </div>
+        <div className="page-actions">
+          <Button variant="primary" icon={<Plus size={18} />} onClick={() => setIsAddingTransaction(true)}>
+            Nova Transação
+          </Button>
+        </div>
+      </div>
+
+      {/* Navegação de Abas Internas */}
+      <div className="transactions-tabs">
+        <button 
+          className={`tx-tab ${activeTab === 'all' ? 'active' : ''}`}
+          onClick={() => setActiveTab('all')}
+        >
+          Extrato Completo
+        </button>
+        <button 
+          className={`tx-tab ${activeTab === 'payable' ? 'active text-coral' : ''}`}
+          onClick={() => setActiveTab('payable')}
+        >
+          Contas a Pagar
+          <Badge variant="danger" className="ml-2">
+            {transactions.filter(t => t.type === 'expense' && t.status === 'pending').length}
+          </Badge>
+        </button>
+        <button 
+          className={`tx-tab ${activeTab === 'receivable' ? 'active text-emerald' : ''}`}
+          onClick={() => setActiveTab('receivable')}
+        >
+          Contas a Receber
+          <Badge variant="success" className="ml-2">
+            {transactions.filter(t => t.type === 'income' && t.status === 'pending').length}
+          </Badge>
+        </button>
+      </div>
+
+      <GlassCard className="transactions-list-card">
+        <div className="filters-bar">
+          <div className="search-box glass">
+            <Search size={18} className="text-muted" />
+            <input 
+              type="text" 
+              placeholder="Buscar transação..." 
+              className="search-input" 
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
+          <div className="account-select-wrapper">
+            <select 
+              className="account-filter-select glass"
+              value={filterAccountId}
+              onChange={e => setFilterAccountId(e.target.value)}
+            >
+              <option value="all">Todas as Contas</option>
+              {accounts.map(acc => (
+                <option key={acc.id} value={acc.id}>{acc.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="transactions-table">
+          {filteredTransactions.map(tx => (
+             <div 
+               key={tx.id} 
+               className="transaction-item" 
+               style={{ cursor: 'pointer' }}
+               onClick={() => setSelectedTxForDetails(tx)}
+             >
+              <div className="tx-icon glass">
+                {tx.type === 'income' ? (
+                  <ArrowUpRight size={20} className="text-emerald" />
+                ) : (
+                  <ArrowDownRight size={20} className="text-coral" />
+                )}
+              </div>
+              <div className="tx-details">
+                <h4>{tx.description}</h4>
+                <p>
+                  {tx.category}
+                  {accounts.find(a => a.id === tx.accountId) && ` • ${accounts.find(a => a.id === tx.accountId).name}`}
+                </p>
+              </div>
+              <div className="tx-date">
+                {formatDate(tx.date)}
+              </div>
+              <div className="tx-amount-col" style={{ flexDirection: 'row', alignItems: 'center', gap: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                  <span className={`tx-amount ${tx.type === 'income' ? 'text-emerald' : ''}`}>
+                    {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount, hideValues)}
+                  </span>
+                  <Badge variant={tx.status === 'paid' ? 'success' : (tx.status === 'partial' ? 'warning' : 'danger')}>
+                    {tx.status === 'paid' ? 'Pago' : (tx.status === 'partial' ? 'Parcial' : 'Pendente')}
+                  </Badge>
+                </div>
+                {tx.status !== 'paid' && (
+                  <button 
+                    className="action-btn glass" 
+                    title="Dar Baixa"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedTxForPayment(tx);
+                    }}
+                    style={{ width: '36px', height: '36px', color: 'var(--accent-emerald)' }}
+                  >
+                    <Check size={18} />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+          {filteredTransactions.length === 0 && (
+            <div className="empty-state">Nenhuma transação encontrada nesta categoria.</div>
+          )}
+        </div>
+      </GlassCard>
+
+      {selectedTxForPayment && (
+        <PaymentModal
+          transaction={selectedTxForPayment}
+          onConfirm={handleConfirmPayment}
+          onCancel={() => setSelectedTxForPayment(null)}
+        />
+      )}
+
+      <TransactionDetailsModal
+        transaction={selectedTxForDetails}
+        onCancel={() => setSelectedTxForDetails(null)}
+        onPayRemaining={handlePayRemaining}
+      />
+
+      {isAddingTransaction && (
+        <TransactionFormDrawer onClose={() => setIsAddingTransaction(false)} />
+      )}
+    </div>
+  );
+}

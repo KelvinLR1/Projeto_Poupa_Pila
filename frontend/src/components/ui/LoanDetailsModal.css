@@ -1,0 +1,246 @@
+/* LoanDetailsModal — estilos específicos */
+
+.loan-details-container {
+  max-width: 520px;
+}
+
+/* Badge row no header */
+.loan-detail-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+
+.loan-type-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+}
+
+/* Métricas horizontais */
+.loan-metrics {
+  display: flex;
+  align-items: stretch;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.loan-metric-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 16px;
+}
+
+.loan-metric-divider {
+  width: 1px;
+  background: rgba(255, 255, 255, 0.07);
+  flex-shrink: 0;
+}
+
+.loan-metric-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.loan-metric-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+/* Barra de progresso */
+.loan-progress-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.loan-progress-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.loan-progress-header strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.loan-progress-track {
+  height: 7px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.loan-progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fill-emerald {
+  background: linear-gradient(90deg, #059669, var(--accent-emerald));
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.35);
+}
+
+.fill-coral {
+  background: linear-gradient(90deg, #be123c, var(--accent-coral));
+  box-shadow: 0 0 10px rgba(244, 63, 94, 0.35);
+}
+
+/* Timeline */
+.loan-timeline-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.loan-timeline-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.loan-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.loan-timeline-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.loan-timeline-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.icon-outgoing {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--accent-emerald);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.icon-incoming {
+  background: rgba(244, 63, 94, 0.1);
+  color: var(--accent-coral);
+  border: 1px solid rgba(244, 63, 94, 0.2);
+}
+
+.loan-timeline-content {
+  flex: 1;
+  min-width: 0;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.loan-timeline-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.loan-timeline-desc {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.loan-timeline-amount {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.amount-paid {
+  color: var(--accent-emerald);
+}
+
+.loan-timeline-meta {
+  display: flex;
+  gap: 14px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.loan-timeline-due {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent-gold);
+}
+
+/* Footer com dois lados */
+.loan-details-footer {
+  justify-content: space-between !important;
+}
+
+/* Botão de expandir/colapsar timeline */
+.timeline-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 8px;
+  padding: 9px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 160ms ease;
+  letter-spacing: 0.01em;
+}
+
+.timeline-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: var(--text-primary);
+}
+
+/* Responsivo */
+@media (max-width: 560px) {
+  .loan-metrics {
+    flex-direction: column;
+  }
+  .loan-metric-divider {
+    width: auto;
+    height: 1px;
+  }
+}
