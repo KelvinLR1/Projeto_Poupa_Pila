@@ -8,15 +8,30 @@ import './PaymentModal.css';
 import './LoanDetailsModal.css';
 
 export function LoanDetailsModal({ loan, onClose, onAddAmount, onRegisterPayment }) {
-  const remaining = loan.totalAmount - loan.paidAmount;
-  const isSettled = loan.status === 'settled';
-  const progress = Math.min((loan.paidAmount / loan.totalAmount) * 100, 100);
-  const [showAll, setShowAll] = useState(false);
+  const remaining    = loan.totalAmount - loan.paidAmount;
+  const isSettled    = loan.status === 'settled';
+  const progress     = Math.min((loan.paidAmount / loan.totalAmount) * 100, 100);
 
-  const VISIBLE_LIMIT = 3;
-  const sortedHistory = [...loan.history].sort((a, b) => new Date(b.date) - new Date(a.date));
-  const visibleHistory = showAll ? sortedHistory : sortedHistory.slice(0, VISIBLE_LIMIT);
-  const hasMore = sortedHistory.length > VISIBLE_LIMIT;
+  const [showAllLoans,    setShowAllLoans]    = useState(false);
+  const [showAllPayments, setShowAllPayments] = useState(false);
+
+  const LIMIT = 4;
+
+  // Separa e ordena por data (mais recente primeiro)
+  const loanEntries   = loan.history
+    .filter(h => h.type === 'loan')
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  const paymentEntries = loan.history
+    .filter(h => h.type === 'payment')
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  const visibleLoans    = showAllLoans    ? loanEntries    : loanEntries.slice(0, LIMIT);
+  const visiblePayments = showAllPayments ? paymentEntries : paymentEntries.slice(0, LIMIT);
+
+  // Labels dependentes do tipo
+  const colLoanLabel    = loan.type === 'lent' ? 'Valores Emprestados' : 'Valores Recebidos';
+  const colPayLabel     = loan.type === 'lent' ? 'Devoluções Recebidas' : 'Pagamentos Feitos';
 
   return createPortal(
     <div className="modal-overlay" onClick={onClose}>
@@ -40,10 +55,10 @@ export function LoanDetailsModal({ loan, onClose, onAddAmount, onRegisterPayment
           </button>
         </div>
 
-        {/* Body com scroll */}
+        {/* Body */}
         <div className="modal-body">
 
-          {/* Métricas */}
+          {/* Métricas horizontais */}
           <div className="loan-metrics">
             <div className="loan-metric-item">
               <span className="loan-metric-label">Total Emprestado</span>
@@ -77,54 +92,79 @@ export function LoanDetailsModal({ loan, onClose, onAddAmount, onRegisterPayment
             </div>
           </div>
 
-          {/* Timeline */}
-          <div className="loan-timeline-section">
-            <h4 className="loan-timeline-title">Linha do Tempo</h4>
-            <div className="loan-timeline">
-              {visibleHistory.map(item => {
-                const isLoanEntry = item.type === 'loan';
-                const isIncoming = (isLoanEntry && loan.type === 'borrowed') || (!isLoanEntry && loan.type === 'lent');
-                return (
-                  <div key={item.id} className="loan-timeline-item">
-                    <div className={`loan-timeline-icon ${isIncoming ? 'icon-incoming' : 'icon-outgoing'}`}>
-                      {isIncoming
-                        ? <ArrowDownRight size={14} />
-                        : <ArrowUpRight size={14} />
-                      }
+          {/* Duas colunas */}
+          <div className="loan-columns">
+
+            {/* Coluna Esquerda — Entradas (empréstimos) */}
+            <div className="loan-col">
+              <div className="loan-col-header loan-col-header--out">
+                <ArrowUpRight size={14} />
+                <span>{colLoanLabel}</span>
+                <strong className="loan-col-total">{formatCurrency(loanEntries.reduce((s, h) => s + h.amount, 0))}</strong>
+              </div>
+
+              <div className="loan-col-list">
+                {loanEntries.length === 0 && (
+                  <p className="loan-col-empty">Nenhum registro</p>
+                )}
+                {visibleLoans.map(item => (
+                  <div key={item.id} className="loan-col-item">
+                    <div className="loan-col-item-top">
+                      <span className="loan-col-item-desc" title={item.description}>{item.description}</span>
+                      <span className="loan-col-item-amount amount-out">{formatCurrency(item.amount)}</span>
                     </div>
-                    <div className="loan-timeline-content">
-                      <div className="loan-timeline-row">
-                        <span className="loan-timeline-desc">{item.description}</span>
-                        <span className={`loan-timeline-amount ${isLoanEntry ? '' : 'amount-paid'}`}>
-                          {isLoanEntry ? '+' : '−'}{formatCurrency(item.amount)}
+                    <div className="loan-col-item-meta">
+                      <span>{formatDate(item.date)}</span>
+                      {item.dueDate && (
+                        <span className="loan-col-due">
+                          <Calendar size={10} />
+                          {formatDate(item.dueDate)}
                         </span>
-                      </div>
-                      <div className="loan-timeline-meta">
-                        <span>{formatDate(item.date)}</span>
-                        {isLoanEntry && item.dueDate && (
-                          <span className="loan-timeline-due">
-                            <Calendar size={11} />
-                            Vence: {formatDate(item.dueDate)}
-                          </span>
-                        )}
-                      </div>
+                      )}
                     </div>
                   </div>
-                );
-              })}
+                ))}
+                {loanEntries.length > LIMIT && (
+                  <button className="col-toggle-btn" onClick={() => setShowAllLoans(p => !p)}>
+                    {showAllLoans ? 'Ver menos' : `+${loanEntries.length - LIMIT} mais`}
+                  </button>
+                )}
+              </div>
             </div>
 
-            {hasMore && (
-              <button
-                className="timeline-toggle-btn"
-                onClick={() => setShowAll(prev => !prev)}
-              >
-                {showAll
-                  ? 'Mostrar menos'
-                  : `Ver todos os ${sortedHistory.length} lançamentos`
-                }
-              </button>
-            )}
+            {/* Divider vertical */}
+            <div className="loan-col-divider" />
+
+            {/* Coluna Direita — Saídas (pagamentos) */}
+            <div className="loan-col">
+              <div className="loan-col-header loan-col-header--in">
+                <ArrowDownRight size={14} />
+                <span>{colPayLabel}</span>
+                <strong className="loan-col-total">{formatCurrency(paymentEntries.reduce((s, h) => s + h.amount, 0))}</strong>
+              </div>
+
+              <div className="loan-col-list">
+                {paymentEntries.length === 0 && (
+                  <p className="loan-col-empty">Nenhum registro</p>
+                )}
+                {visiblePayments.map(item => (
+                  <div key={item.id} className="loan-col-item">
+                    <div className="loan-col-item-top">
+                      <span className="loan-col-item-desc" title={item.description}>{item.description}</span>
+                      <span className="loan-col-item-amount amount-in">{formatCurrency(item.amount)}</span>
+                    </div>
+                    <div className="loan-col-item-meta">
+                      <span>{formatDate(item.date)}</span>
+                    </div>
+                  </div>
+                ))}
+                {paymentEntries.length > LIMIT && (
+                  <button className="col-toggle-btn" onClick={() => setShowAllPayments(p => !p)}>
+                    {showAllPayments ? 'Ver menos' : `+${paymentEntries.length - LIMIT} mais`}
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 

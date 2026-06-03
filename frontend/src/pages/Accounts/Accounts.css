@@ -152,3 +152,73 @@
     gap: 20px;
   }
 }
+
+/* ── Botões de ação do card ───────────────── */
+.acc-card-actions {
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.account-details-card:hover .acc-card-actions {
+  opacity: 1;
+}
+
+.acc-action-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.acc-action-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.acc-action-deactivate:hover {
+  background: rgba(244, 63, 94, 0.1);
+  border-color: rgba(244, 63, 94, 0.25);
+  color: var(--accent-coral);
+}
+
+.acc-action-activate:hover {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.25);
+  color: var(--accent-emerald);
+}
+
+/* ── Conta inativa ────────────────────────── */
+.acc-inactive {
+  opacity: 0.55;
+  filter: grayscale(40%);
+  transition: opacity 200ms ease, filter 200ms ease;
+}
+
+.acc-inactive:hover {
+  opacity: 0.8;
+  filter: grayscale(20%);
+}
+
+/* ── Seção de contas inativas ─────────────── */
+.acc-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-muted);
+  margin: 0 0 16px 0;
+}
+

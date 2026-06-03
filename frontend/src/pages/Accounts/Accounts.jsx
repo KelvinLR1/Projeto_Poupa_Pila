@@ -3,30 +3,106 @@ import { useFinance } from '../../context/FinanceContext';
 import { formatCurrency } from '../../utils/formatters';
 import { GlassCard } from '../../components/ui/GlassCard';
 import { Button } from '../../components/ui/Button';
-import { Plus, Wallet, Building2, Landmark, Check, Activity } from 'lucide-react';
+import { Badge } from '../../components/ui/Badge';
+import { AccountEditModal } from '../../components/ui/AccountEditModal';
+import { Plus, Wallet, Building2, Landmark, Check, Activity, Pencil, EyeOff, Eye } from 'lucide-react';
 import './Accounts.css';
 
 export function Accounts() {
-  const { accounts, addAccount, hideValues } = useFinance();
-  const [isAdding, setIsAdding] = useState(false);
-  const [newAccount, setNewAccount] = useState({ name: '', type: 'checking', color: '#10b981', initialBalance: 0 });
+  const { accounts, addAccount, toggleAccountStatus, hideValues } = useFinance();
+  const [isAdding, setIsAdding]           = useState(false);
+  const [editingAccount, setEditingAccount] = useState(null);
+  const [newAccount, setNewAccount]       = useState({ name: '', type: 'checking', color: '#10b981', initialBalance: 0 });
 
   const handleAdd = (e) => {
     e.preventDefault();
     if (!newAccount.name) return;
-    
     addAccount(newAccount);
     setIsAdding(false);
     setNewAccount({ name: '', type: 'checking', color: '#10b981', initialBalance: 0 });
   };
 
   const getIconForType = (type) => {
-    switch(type) {
-      case 'wallet': return <Wallet size={24} />;
-      case 'savings': return <Landmark size={24} />;
+    switch (type) {
+      case 'wallet':     return <Wallet size={24} />;
+      case 'savings':    return <Landmark size={24} />;
       case 'investment': return <Activity size={24} />;
-      default: return <Building2 size={24} />;
+      default:           return <Building2 size={24} />;
     }
+  };
+
+  const TYPE_LABELS = {
+    checking:   'Conta Corrente',
+    savings:    'Poupança',
+    investment: 'Investimento',
+    wallet:     'Carteira Física'
+  };
+
+  const activeAccounts   = accounts.filter(a => a.active !== false);
+  const inactiveAccounts = accounts.filter(a => a.active === false);
+
+  const renderCard = (acc) => {
+    const isInactive = acc.active === false;
+
+    return (
+      <GlassCard key={acc.id} className={`account-details-card ${isInactive ? 'acc-inactive' : ''}`}>
+        {/* Header do card */}
+        <div className="acc-card-header">
+          <div
+            className="acc-icon"
+            style={{
+              color: isInactive ? 'var(--text-muted)' : acc.color,
+              background: isInactive ? 'rgba(255,255,255,0.03)' : `${acc.color}15`,
+              border: `1px solid ${isInactive ? 'rgba(255,255,255,0.07)' : acc.color + '30'}`,
+              boxShadow: isInactive ? 'none' : `0 0 16px ${acc.color}25`
+            }}
+          >
+            {getIconForType(acc.type)}
+          </div>
+          <div className="acc-title" style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <h4>{acc.name}</h4>
+              {isInactive && <Badge variant="default">Inativa</Badge>}
+            </div>
+            <p>{TYPE_LABELS[acc.type] || 'Conta'}</p>
+          </div>
+
+          {/* Ações do card */}
+          <div className="acc-card-actions">
+            <button
+              className="acc-action-btn"
+              title="Editar conta"
+              onClick={() => setEditingAccount(acc)}
+            >
+              <Pencil size={15} />
+            </button>
+            <button
+              className={`acc-action-btn ${isInactive ? 'acc-action-activate' : 'acc-action-deactivate'}`}
+              title={isInactive ? 'Reativar conta' : 'Inativar conta'}
+              onClick={() => toggleAccountStatus(acc.id)}
+            >
+              {isInactive ? <Eye size={15} /> : <EyeOff size={15} />}
+            </button>
+          </div>
+        </div>
+
+        {/* Saldo */}
+        <div className="acc-card-body">
+          <p>Saldo Atual</p>
+          <h2
+            style={{
+              color: isInactive ? 'var(--text-muted)'
+                : acc.balance < 0 ? 'var(--accent-coral)' : undefined,
+              WebkitTextFillColor: isInactive ? 'var(--text-muted)'
+                : acc.balance < 0 ? 'var(--accent-coral)' : undefined,
+              opacity: isInactive ? 0.5 : 1
+            }}
+          >
+            {formatCurrency(acc.balance, hideValues)}
+          </h2>
+        </div>
+      </GlassCard>
+    );
   };
 
   return (
@@ -45,26 +121,29 @@ export function Accounts() {
         </div>
       </div>
 
+      {/* Formulário de nova conta */}
       {isAdding && (
         <GlassCard className="add-account-form animate-slide-up">
           <h3>Adicionar Nova Conta</h3>
           <form onSubmit={handleAdd}>
             <div className="form-group">
               <label>Nome da Instituição / Conta</label>
-              <input 
-                type="text" 
-                placeholder="Ex: Nubank, Bradesco, Carteira Física" 
+              <input
+                type="text"
+                className="form-input"
+                placeholder="Ex: Nubank, Bradesco, Carteira Física"
                 value={newAccount.name}
-                onChange={(e) => setNewAccount({...newAccount, name: e.target.value})}
+                onChange={(e) => setNewAccount({ ...newAccount, name: e.target.value })}
                 autoFocus
               />
             </div>
             <div className="form-row">
               <div className="form-group">
                 <label>Tipo de Conta</label>
-                <select 
+                <select
+                  className="form-select"
                   value={newAccount.type}
-                  onChange={(e) => setNewAccount({...newAccount, type: e.target.value})}
+                  onChange={(e) => setNewAccount({ ...newAccount, type: e.target.value })}
                 >
                   <option value="checking">Conta Corrente</option>
                   <option value="savings">Poupança</option>
@@ -74,19 +153,20 @@ export function Accounts() {
               </div>
               <div className="form-group">
                 <label>Saldo Inicial (R$)</label>
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   step="0.01"
+                  className="form-input"
                   value={newAccount.initialBalance}
-                  onChange={(e) => setNewAccount({...newAccount, initialBalance: parseFloat(e.target.value) || 0})}
+                  onChange={(e) => setNewAccount({ ...newAccount, initialBalance: parseFloat(e.target.value) || 0 })}
                 />
               </div>
               <div className="form-group">
                 <label>Cor Identificadora</label>
-                <input 
-                  type="color" 
+                <input
+                  type="color"
                   value={newAccount.color}
-                  onChange={(e) => setNewAccount({...newAccount, color: e.target.value})}
+                  onChange={(e) => setNewAccount({ ...newAccount, color: e.target.value })}
                   className="color-picker"
                 />
               </div>
@@ -99,40 +179,35 @@ export function Accounts() {
         </GlassCard>
       )}
 
-      <div className="accounts-grid">
-        {accounts.map(acc => (
-          <GlassCard key={acc.id} className="account-details-card">
-            <div className="acc-card-header">
-              <div 
-                className="acc-icon" 
-                style={{ 
-                  color: acc.color,
-                  background: `${acc.color}15`,
-                  border: `1px solid ${acc.color}30`,
-                  boxShadow: `0 0 16px ${acc.color}25`
-                }}
-              >
-                {getIconForType(acc.type)}
-              </div>
-              <div className="acc-title">
-                <h4>{acc.name}</h4>
-                <p>
-                  {acc.type === 'checking' && 'Conta Corrente'}
-                  {acc.type === 'savings' && 'Poupança'}
-                  {acc.type === 'investment' && 'Investimento'}
-                  {acc.type === 'wallet' && 'Carteira Física'}
-                </p>
-              </div>
-            </div>
-            <div className="acc-card-body">
-              <p>Saldo Atual</p>
-              <h2 style={{ filter: acc.balance < 0 ? 'none' : undefined, color: acc.balance < 0 ? 'var(--accent-coral)' : undefined, WebkitTextFillColor: acc.balance < 0 ? 'var(--accent-coral)' : undefined }}>
-                {formatCurrency(acc.balance, hideValues)}
-              </h2>
-            </div>
-          </GlassCard>
-        ))}
-      </div>
+      {/* Contas Ativas */}
+      {activeAccounts.length > 0 && (
+        <section>
+          <div className="accounts-grid">
+            {activeAccounts.map(renderCard)}
+          </div>
+        </section>
+      )}
+
+      {/* Contas Inativas */}
+      {inactiveAccounts.length > 0 && (
+        <section>
+          <h3 className="acc-section-title">
+            <EyeOff size={15} />
+            Contas Inativas ({inactiveAccounts.length})
+          </h3>
+          <div className="accounts-grid">
+            {inactiveAccounts.map(renderCard)}
+          </div>
+        </section>
+      )}
+
+      {/* Modal de edição */}
+      {editingAccount && (
+        <AccountEditModal
+          account={editingAccount}
+          onClose={() => setEditingAccount(null)}
+        />
+      )}
     </div>
   );
 }

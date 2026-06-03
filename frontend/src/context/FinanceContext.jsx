@@ -114,9 +114,22 @@ export function FinanceProvider({ children }) {
     const account = {
       ...newAccount,
       id: Math.random().toString(36).substr(2, 9),
-      balance: newAccount.initialBalance || 0
+      balance: newAccount.initialBalance || 0,
+      active: true
     };
     setAccounts(prev => [...prev, account]);
+  };
+
+  const updateAccount = (id, changes) => {
+    setAccounts(prev => prev.map(acc =>
+      acc.id === id ? { ...acc, ...changes } : acc
+    ));
+  };
+
+  const toggleAccountStatus = (id) => {
+    setAccounts(prev => prev.map(acc =>
+      acc.id === id ? { ...acc, active: acc.active === false ? true : false } : acc
+    ));
   };
 
   const addTransaction = (newTx) => {
@@ -240,6 +253,8 @@ export function FinanceProvider({ children }) {
       totalBalance,
       markTransactionAsPaid,
       addAccount,
+      updateAccount,
+      toggleAccountStatus,
       addTransaction,
       addLoan,
       payLoan
