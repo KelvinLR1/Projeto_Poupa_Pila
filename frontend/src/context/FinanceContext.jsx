@@ -25,14 +25,14 @@ const initialLoans = [
     dueDate: '2026-07-01', 
     status: 'active',
     history: [
-      { id: 'h1', type: 'loan',    amount: 800,  date: '2026-04-10', dueDate: '2026-06-10', description: 'Empréstimo inicial — aluguel atrasado' },
-      { id: 'h2', type: 'payment', amount: 200,  date: '2026-04-28', description: 'Devolução parcial (Pix)' },
-      { id: 'h3', type: 'loan',    amount: 350,  date: '2026-05-05', dueDate: '2026-06-30', description: 'Valor extra — conta de luz' },
-      { id: 'h4', type: 'payment', amount: 300,  date: '2026-05-15', description: 'Pagamento de maio' },
-      { id: 'h5', type: 'loan',    amount: 500,  date: '2026-05-22', dueDate: '2026-07-01', description: 'Conserto do carro' },
-      { id: 'h6', type: 'loan',    amount: 400,  date: '2026-06-01', dueDate: '2026-07-01', description: 'Mercado + remédio' },
-      { id: 'h7', type: 'payment', amount: 350,  date: '2026-06-03', description: 'Pix de hoje' },
-      { id: 'h8', type: 'loan',    amount: 300,  date: '2026-06-03', dueDate: '2026-07-15', description: 'Passagem de ônibus (mês)' }
+      { id: 'h1', type: 'loan',    amount: 800,  date: '2026-04-10', dueDate: '2026-06-10', description: 'Empréstimo inicial — aluguel atrasado', direction: 'lent' },
+      { id: 'h2', type: 'payment', amount: 200,  date: '2026-04-28', description: 'Devolução parcial (Pix)', direction: 'lent' },
+      { id: 'h3', type: 'loan',    amount: 350,  date: '2026-05-05', dueDate: '2026-06-30', description: 'Valor extra — conta de luz', direction: 'lent' },
+      { id: 'h4', type: 'payment', amount: 300,  date: '2026-05-15', description: 'Pagamento de maio', direction: 'lent' },
+      { id: 'h5', type: 'loan',    amount: 500,  date: '2026-05-22', dueDate: '2026-07-01', description: 'Conserto do carro', direction: 'lent' },
+      { id: 'h6', type: 'loan',    amount: 400,  date: '2026-06-01', dueDate: '2026-07-01', description: 'Mercado + remédio', direction: 'lent' },
+      { id: 'h7', type: 'payment', amount: 350,  date: '2026-06-03', description: 'Pix de hoje', direction: 'lent' },
+      { id: 'h8', type: 'loan',    amount: 300,  date: '2026-06-03', dueDate: '2026-07-15', description: 'Passagem de ônibus (mês)', direction: 'lent' }
     ]
   },
   { 
@@ -44,11 +44,78 @@ const initialLoans = [
     dueDate: '2026-05-20', 
     status: 'settled',
     history: [
-      { id: 'h9',  type: 'loan',    amount: 500, date: '2026-05-01', dueDate: '2026-05-20', description: 'Conserto do carro' },
-      { id: 'h10', type: 'payment', amount: 500, date: '2026-05-15', description: 'Quitação total' }
+      { id: 'h9',  type: 'loan',    amount: 500, date: '2026-05-01', dueDate: '2026-05-20', description: 'Conserto do carro', direction: 'borrowed' },
+      { id: 'h10', type: 'payment', amount: 500, date: '2026-05-15', description: 'Quitação total', direction: 'borrowed' }
     ]
   }
 ];
+
+const recalculateLoan = (loan) => {
+  let outgoingSum = 0; // Flow from me to them (lent loan + borrowed payment)
+  let incomingSum = 0; // Flow from them to me (borrowed loan + lent payment)
+
+  loan.history.forEach(item => {
+    const dir = item.direction || loan.type;
+    if (item.type === 'loan') {
+      if (dir === 'lent') {
+        outgoingSum += item.amount;
+      } else {
+        incomingSum += item.amount;
+      }
+    } else if (item.type === 'payment') {
+      if (dir === 'lent') {
+        incomingSum += item.amount;
+      } else {
+        outgoingSum += item.amount;
+      }
+    }
+  });
+
+  const netBalance = outgoingSum - incomingSum;
+  let newType = loan.type;
+  let totalAmount = 0;
+  let paidAmount = 0;
+  let status = 'active';
+
+  if (netBalance > 0) {
+    newType = 'lent';
+    totalAmount = outgoingSum;
+    paidAmount = incomingSum;
+  } else if (netBalance < 0) {
+    newType = 'borrowed';
+    totalAmount = incomingSum;
+    paidAmount = outgoingSum;
+  } else {
+    // Settled completely
+    totalAmount = Math.max(outgoingSum, incomingSum);
+    paidAmount = totalAmount;
+    status = 'settled';
+  }
+
+  if (netBalance !== 0) {
+    status = 'active';
+  }
+
+  // Set the closest due date for active loans
+  const loanDates = loan.history
+    .filter(h => h.type === 'loan' && (h.direction || loan.type) === newType)
+    .map(h => h.dueDate)
+    .filter(Boolean);
+    
+  const dueDate = loanDates.length > 0 ? loanDates.reduce((closest, curr) => {
+    if (!closest) return curr;
+    return new Date(curr) < new Date(closest) ? curr : closest;
+  }, '') : loan.dueDate;
+
+  return {
+    ...loan,
+    type: newType,
+    totalAmount,
+    paidAmount,
+    dueDate,
+    status
+  };
+};
 
 export function FinanceProvider({ children }) {
   const [accounts, setAccounts] = useState(initialAccounts);
@@ -164,7 +231,7 @@ export function FinanceProvider({ children }) {
 
     setLoans(prev => {
       const existingIdx = prev.findIndex(
-        l => l.counterpart.toLowerCase().trim() === counterpart.toLowerCase().trim() && l.type === type
+        l => l.counterpart.toLowerCase().trim() === counterpart.toLowerCase().trim()
       );
 
       const historyItem = {
@@ -173,7 +240,8 @@ export function FinanceProvider({ children }) {
         amount: parseFloat(amount),
         date: date || new Date().toISOString().split('T')[0],
         dueDate,
-        description: description || 'Empréstimo adicional'
+        description: description || 'Empréstimo adicional',
+        direction: type
       };
 
       if (existingIdx !== -1) {
@@ -181,25 +249,10 @@ export function FinanceProvider({ children }) {
         const currentLoan = updated[existingIdx];
         
         const newHistory = [...currentLoan.history, historyItem];
-        const newTotalAmount = currentLoan.totalAmount + parseFloat(amount);
-        const newPaidAmount = currentLoan.paidAmount;
-        
-        const loanDates = newHistory
-          .filter(h => h.type === 'loan')
-          .map(h => h.dueDate)
-          .filter(Boolean);
-        const newDueDate = loanDates.length > 0 ? loanDates.reduce((closest, curr) => {
-          if (!closest) return curr;
-          return new Date(curr) < new Date(closest) ? curr : closest;
-        }, '') : dueDate;
-
-        updated[existingIdx] = {
+        updated[existingIdx] = recalculateLoan({
           ...currentLoan,
-          totalAmount: newTotalAmount,
-          dueDate: newDueDate,
-          status: newPaidAmount >= newTotalAmount ? 'settled' : 'active',
           history: newHistory
-        };
+        });
         return updated;
       } else {
         const newRecord = {
@@ -212,7 +265,7 @@ export function FinanceProvider({ children }) {
           status: 'active',
           history: [historyItem]
         };
-        return [...prev, newRecord];
+        return [...prev, recalculateLoan(newRecord)];
       }
     });
   };
@@ -225,30 +278,35 @@ export function FinanceProvider({ children }) {
           type: 'payment',
           amount: parseFloat(amount),
           date: date || new Date().toISOString().split('T')[0],
-          description: description || 'Pagamento recebido'
+          description: description || 'Pagamento recebido',
+          direction: loan.type
         };
 
         const newHistory = [...loan.history, paymentItem];
-        const newPaidAmount = loan.paidAmount + parseFloat(amount);
-        const status = newPaidAmount >= loan.totalAmount ? 'settled' : 'active';
-
-        return {
+        return recalculateLoan({
           ...loan,
-          paidAmount: newPaidAmount,
-          status,
           history: newHistory
-        };
+        });
       }
       return loan;
     }));
   };
+
   const toggleLoanType = (loanId) => {
     setLoans(prev => prev.map(loan => {
       if (loan.id === loanId) {
-        return {
+        const updatedHistory = loan.history.map(item => {
+          const currentDir = item.direction || loan.type;
+          return {
+            ...item,
+            direction: currentDir === 'lent' ? 'borrowed' : 'lent'
+          };
+        });
+        return recalculateLoan({
           ...loan,
-          type: loan.type === 'lent' ? 'borrowed' : 'lent'
-        };
+          type: loan.type === 'lent' ? 'borrowed' : 'lent',
+          history: updatedHistory
+        });
       }
       return loan;
     }));

@@ -19,21 +19,30 @@ export function LoanDetailsModal({ loan, onClose, onAddAmount, onRegisterPayment
 
   const LIMIT = 4;
 
-  // Separa e ordena por data (mais recente primeiro)
-  const loanEntries   = loan.history
-    .filter(h => h.type === 'loan')
+  // Filtra itens de saída (meu dinheiro indo para o outro)
+  const outgoingEntries = loan.history
+    .filter(h => {
+      const dir = h.direction || loan.type;
+      return (h.type === 'loan' && dir === 'lent') || (h.type === 'payment' && dir === 'borrowed');
+    })
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
-  const paymentEntries = loan.history
-    .filter(h => h.type === 'payment')
+  // Filtra itens de entrada (dinheiro do outro vindo para mim)
+  const incomingEntries = loan.history
+    .filter(h => {
+      const dir = h.direction || loan.type;
+      return (h.type === 'loan' && dir === 'borrowed') || (h.type === 'payment' && dir === 'lent');
+    })
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
-  const visibleLoans    = showAllLoans    ? loanEntries    : loanEntries.slice(0, LIMIT);
-  const visiblePayments = showAllPayments ? paymentEntries : paymentEntries.slice(0, LIMIT);
+  const visibleLoans    = showAllLoans    ? outgoingEntries    : outgoingEntries.slice(0, LIMIT);
+  const visiblePayments = showAllPayments ? incomingEntries : incomingEntries.slice(0, LIMIT);
 
-  // Labels dependentes do tipo
-  const colLoanLabel    = loan.type === 'lent' ? 'Valores Emprestados' : 'Valores Recebidos';
-  const colPayLabel     = loan.type === 'lent' ? 'Devoluções Recebidas' : 'Pagamentos Feitos';
+  // Labels dinâmicas com base na natureza do empréstimo
+  const metricTotalLabel = loan.type === 'lent' ? 'Total Emprestado' : 'Total Pegado';
+  const metricPaidLabel  = loan.type === 'lent' ? 'Já Recebido' : 'Já Pago';
+  const colLoanLabel     = loan.type === 'lent' ? 'Valores Emprestados' : 'Pagamentos Feitos';
+  const colPayLabel      = loan.type === 'lent' ? 'Devoluções Recebidas' : 'Valores Recebidos';
 
   return createPortal(
     <div className="modal-overlay" onClick={onClose}>
@@ -71,12 +80,12 @@ export function LoanDetailsModal({ loan, onClose, onAddAmount, onRegisterPayment
           {/* Métricas horizontais */}
           <div className="loan-metrics">
             <div className="loan-metric-item">
-              <span className="loan-metric-label">Total Emprestado</span>
+              <span className="loan-metric-label">{metricTotalLabel}</span>
               <strong className="loan-metric-value">{formatCurrency(loan.totalAmount)}</strong>
             </div>
             <div className="loan-metric-divider" />
             <div className="loan-metric-item">
-              <span className="loan-metric-label">Já Quitado</span>
+              <span className="loan-metric-label">{metricPaidLabel}</span>
               <strong className="loan-metric-value text-emerald">{formatCurrency(loan.paidAmount)}</strong>
             </div>
             <div className="loan-metric-divider" />
@@ -105,16 +114,16 @@ export function LoanDetailsModal({ loan, onClose, onAddAmount, onRegisterPayment
           {/* Duas colunas */}
           <div className="loan-columns">
 
-            {/* Coluna Esquerda — Entradas (empréstimos) */}
+            {/* Coluna Esquerda — Saídas / Fluxo de Saída */}
             <div className="loan-col">
               <div className="loan-col-header loan-col-header--out">
                 <ArrowUpRight size={14} />
                 <span>{colLoanLabel}</span>
-                <strong className="loan-col-total">{formatCurrency(loanEntries.reduce((s, h) => s + h.amount, 0))}</strong>
+                <strong className="loan-col-total">{formatCurrency(outgoingEntries.reduce((s, h) => s + h.amount, 0))}</strong>
               </div>
 
               <div className="loan-col-list">
-                {loanEntries.length === 0 && (
+                {outgoingEntries.length === 0 && (
                   <p className="loan-col-empty">Nenhum registro</p>
                 )}
                 {visibleLoans.map(item => (
@@ -134,9 +143,9 @@ export function LoanDetailsModal({ loan, onClose, onAddAmount, onRegisterPayment
                     </div>
                   </div>
                 ))}
-                {loanEntries.length > LIMIT && (
+                {outgoingEntries.length > LIMIT && (
                   <button className="col-toggle-btn" onClick={() => setShowAllLoans(p => !p)}>
-                    {showAllLoans ? 'Ver menos' : `+${loanEntries.length - LIMIT} mais`}
+                    {showAllLoans ? 'Ver menos' : `+${outgoingEntries.length - LIMIT} mais`}
                   </button>
                 )}
               </div>
@@ -145,16 +154,16 @@ export function LoanDetailsModal({ loan, onClose, onAddAmount, onRegisterPayment
             {/* Divider vertical */}
             <div className="loan-col-divider" />
 
-            {/* Coluna Direita — Saídas (pagamentos) */}
+            {/* Coluna Direita — Entradas / Fluxo de Entrada */}
             <div className="loan-col">
               <div className="loan-col-header loan-col-header--in">
                 <ArrowDownRight size={14} />
                 <span>{colPayLabel}</span>
-                <strong className="loan-col-total">{formatCurrency(paymentEntries.reduce((s, h) => s + h.amount, 0))}</strong>
+                <strong className="loan-col-total">{formatCurrency(incomingEntries.reduce((s, h) => s + h.amount, 0))}</strong>
               </div>
 
               <div className="loan-col-list">
-                {paymentEntries.length === 0 && (
+                {incomingEntries.length === 0 && (
                   <p className="loan-col-empty">Nenhum registro</p>
                 )}
                 {visiblePayments.map(item => (
@@ -168,9 +177,9 @@ export function LoanDetailsModal({ loan, onClose, onAddAmount, onRegisterPayment
                     </div>
                   </div>
                 ))}
-                {paymentEntries.length > LIMIT && (
+                {incomingEntries.length > LIMIT && (
                   <button className="col-toggle-btn" onClick={() => setShowAllPayments(p => !p)}>
-                    {showAllPayments ? 'Ver menos' : `+${paymentEntries.length - LIMIT} mais`}
+                    {showAllPayments ? 'Ver menos' : `+${incomingEntries.length - LIMIT} mais`}
                   </button>
                 )}
               </div>
