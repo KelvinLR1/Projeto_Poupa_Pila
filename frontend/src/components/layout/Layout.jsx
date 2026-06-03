@@ -58,7 +58,7 @@ export function Layout({ children, activeTab, setActiveTab }) {
         </header>
 
         {/* Page Content */}
-        <main className="page-wrapper animate-fade-in">
+        <main className="page-wrapper animate-fade-in" key={activeTab}>
           {children}
         </main>
       </div>

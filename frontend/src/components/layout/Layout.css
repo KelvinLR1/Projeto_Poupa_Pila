@@ -79,6 +79,10 @@
   transform: translateX(4px);
 }
 
+.nav-item:active {
+  transform: scale(0.97) translateX(2px);
+}
+
 .nav-item.active {
   background: var(--accent-emerald-light);
   color: var(--accent-emerald);
