@@ -20,6 +20,29 @@
   color: var(--text-muted);
 }
 
+.toggle-type-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease;
+  margin-left: 4px;
+}
+
+.toggle-type-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: var(--text-primary);
+}
+
 /* ── Métricas ──────────────────────────────── */
 .loan-metrics {
   display: flex;

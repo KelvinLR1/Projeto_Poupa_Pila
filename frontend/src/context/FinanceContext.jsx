@@ -242,7 +242,17 @@ export function FinanceProvider({ children }) {
       return loan;
     }));
   };
-
+  const toggleLoanType = (loanId) => {
+    setLoans(prev => prev.map(loan => {
+      if (loan.id === loanId) {
+        return {
+          ...loan,
+          type: loan.type === 'lent' ? 'borrowed' : 'lent'
+        };
+      }
+      return loan;
+    }));
+  };
   return (
     <FinanceContext.Provider value={{
       accounts,
@@ -257,7 +267,8 @@ export function FinanceProvider({ children }) {
       toggleAccountStatus,
       addTransaction,
       addLoan,
-      payLoan
+      payLoan,
+      toggleLoanType
     }}>
       {children}
     </FinanceContext.Provider>

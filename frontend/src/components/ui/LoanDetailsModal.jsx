@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useFinance } from '../../context/FinanceContext';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { Button } from './Button';
 import { Badge } from './Badge';
-import { X, Calendar, Plus, Wallet, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { X, Calendar, Plus, Wallet, ArrowUpRight, ArrowDownRight, ArrowLeftRight } from 'lucide-react';
 import './PaymentModal.css';
 import './LoanDetailsModal.css';
 
 export function LoanDetailsModal({ loan, onClose, onAddAmount, onRegisterPayment }) {
+  const { toggleLoanType } = useFinance();
   const remaining    = loan.totalAmount - loan.paidAmount;
   const isSettled    = loan.status === 'settled';
   const progress     = Math.min((loan.paidAmount / loan.totalAmount) * 100, 100);
@@ -47,6 +49,14 @@ export function LoanDetailsModal({ loan, onClose, onAddAmount, onRegisterPayment
               <span className="loan-type-label">
                 {loan.type === 'lent' ? 'Você emprestou' : 'Você deve'}
               </span>
+              <button 
+                className="toggle-type-btn"
+                title="Inverter sentido (De me devem para eu devo ou vice-versa)"
+                onClick={() => toggleLoanType(loan.id)}
+              >
+                <ArrowLeftRight size={12} />
+                <span>Inverter</span>
+              </button>
             </div>
             <h3>{loan.counterpart}</h3>
           </div>
