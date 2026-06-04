@@ -65,9 +65,74 @@
 .tx-date {
   color: var(--text-secondary);
   font-size: 0.875rem;
-  flex: 1;
+  width: 140px;
   text-align: right;
-  padding-right: 32px;
+  padding-right: 24px;
+  flex-shrink: 0;
+}
+
+.transaction-item {
+  display: flex;
+  align-items: center;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border-color);
+  transition: background var(--transition-fast), transform var(--transition-fast);
+  animation: slideUp 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.transaction-item:hover {
+  background: rgba(255, 255, 255, 0.025);
+  transform: translateX(4px);
+}
+
+.tx-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 16px;
+  flex-shrink: 0;
+}
+
+.tx-details {
+  flex: 1;
+}
+
+.tx-details h4 {
+  margin: 0 0 4px 0;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.tx-details p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.tx-amount-col {
+  width: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.tx-amount {
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+}
+
+.tx-actions {
+  width: 52px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 /* Tabs */

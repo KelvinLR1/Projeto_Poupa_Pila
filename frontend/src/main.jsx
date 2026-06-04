@@ -5,11 +5,17 @@ import './styles/global.css'
 import App from './App.jsx'
 
 import { FinanceProvider } from './context/FinanceContext.jsx'
+import { AuthProvider } from './context/AuthContext.jsx'
+import { VaultProvider } from './context/VaultContext.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <FinanceProvider>
-      <App />
-    </FinanceProvider>
+    <AuthProvider>
+      <FinanceProvider>
+        <VaultProvider>
+          <App />
+        </VaultProvider>
+      </FinanceProvider>
+    </AuthProvider>
   </StrictMode>,
 )

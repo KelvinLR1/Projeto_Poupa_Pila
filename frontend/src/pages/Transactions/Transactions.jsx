@@ -138,15 +138,15 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
               <div className="tx-date">
                 {formatDate(tx.date)}
               </div>
-              <div className="tx-amount-col" style={{ flexDirection: 'row', alignItems: 'center', gap: '16px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                  <span className={`tx-amount ${tx.type === 'income' ? 'text-emerald' : ''}`}>
-                    {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount, hideValues)}
-                  </span>
-                  <Badge variant={tx.status === 'paid' ? 'success' : (tx.status === 'partial' ? 'warning' : 'danger')}>
-                    {tx.status === 'paid' ? 'Pago' : (tx.status === 'partial' ? 'Parcial' : 'Pendente')}
-                  </Badge>
-                </div>
+              <div className="tx-amount-col">
+                <span className={`tx-amount ${tx.type === 'income' ? 'text-emerald' : ''}`}>
+                  {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount, hideValues)}
+                </span>
+                <Badge variant={tx.status === 'paid' ? 'success' : (tx.status === 'partial' ? 'warning' : 'danger')}>
+                  {tx.status === 'paid' ? 'Pago' : (tx.status === 'partial' ? 'Parcial' : 'Pendente')}
+                </Badge>
+              </div>
+              <div className="tx-actions">
                 {tx.status !== 'paid' && (
                   <button 
                     className="action-btn glass" 
