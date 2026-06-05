@@ -34,7 +34,7 @@ export function Login() {
           <div className="login-logo-icon">
             <Sparkles size={32} className="text-emerald" />
           </div>
-          <h1>Finance<span className="text-emerald">Premium</span></h1>
+          <h1>Poupa<span className="text-emerald">Pila</span></h1>
           <p>Insira suas credenciais para acessar o painel financeiro</p>
         </div>
 

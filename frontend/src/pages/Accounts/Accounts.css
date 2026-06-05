@@ -22,22 +22,22 @@
   margin-top: 20px;
 }
 
-.form-group {
+.accounts-page .form-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
   flex: 1;
 }
 
-.form-group label {
+.accounts-page .form-group label {
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--text-secondary);
 }
 
-.form-group input[type="text"],
-.form-group input[type="number"],
-.form-group select {
+.accounts-page .form-group input[type="text"],
+.accounts-page .form-group input[type="number"],
+.accounts-page .form-group select {
   padding: 12px 16px;
   background: var(--surface-light);
   border: 1px solid var(--border-color);
@@ -49,8 +49,8 @@
   transition: all var(--transition-fast);
 }
 
-.form-group input:focus,
-.form-group select:focus {
+.accounts-page .form-group input:focus,
+.accounts-page .form-group select:focus {
   border-color: var(--accent-emerald);
   box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }

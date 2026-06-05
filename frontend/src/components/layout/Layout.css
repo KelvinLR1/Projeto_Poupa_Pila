@@ -64,7 +64,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 16px;
+  padding: 13px 15px;
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   color: var(--text-secondary);
   font-weight: 500;
@@ -76,39 +77,49 @@
 .nav-item:hover {
   background: rgba(255, 255, 255, 0.05);
   color: var(--text-primary);
-  transform: translateX(4px);
+  transform: translateX(6px);
 }
 
 .nav-item:active {
-  transform: scale(0.97) translateX(2px);
+  transform: scale(0.97) translateX(6px) !important;
 }
 
 .nav-item.active {
   background: var(--accent-emerald-light);
   color: var(--accent-emerald);
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  box-shadow: inset 0 0 20px rgba(16, 185, 129, 0.05);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  box-shadow: inset 0 0 20px rgba(16, 185, 129, 0.08);
 }
 
-.nav-item.active::before {
+.nav-item::before {
   content: '';
   position: absolute;
-  left: 0; top: 0; bottom: 0;
-  width: 3px;
+  left: 0;
+  top: 25%;
+  bottom: 25%;
+  width: 3.5px;
   background: var(--accent-emerald);
   border-radius: 0 4px 4px 0;
   box-shadow: var(--shadow-glow-emerald);
+  opacity: 0;
+  transform: scaleY(0);
+  transition: opacity var(--transition-fast), transform var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.nav-item.active::before {
+  opacity: 1;
+  transform: scaleY(1);
 }
 
 /* Vault nav item special styling */
 .nav-item-vault.vault-active {
   background: rgba(99, 102, 241, 0.12);
   color: #818cf8;
-  border-color: rgba(99, 102, 241, 0.2);
-  box-shadow: inset 0 0 20px rgba(99, 102, 241, 0.05);
+  border-color: rgba(99, 102, 241, 0.25);
+  box-shadow: inset 0 0 20px rgba(99, 102, 241, 0.08);
 }
 
-.nav-item-vault.vault-active::before {
+.nav-item-vault::before {
   background: #6366f1;
   box-shadow: 0 0 16px rgba(99, 102, 241, 0.5);
 }

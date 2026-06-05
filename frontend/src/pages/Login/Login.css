@@ -141,8 +141,8 @@
 }
 
 .input-with-icon .form-input {
-  padding-left: 48px;
-  padding-right: 48px;
+  padding-left: 48px !important;
+  padding-right: 48px !important;
   height: 52px;
   background: rgba(255, 255, 255, 0.02);
   border-radius: var(--radius-md);

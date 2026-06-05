@@ -22,7 +22,7 @@ export function Layout({ children, activeTab, setActiveTab }) {
       <aside className="sidebar glass">
         <div className="sidebar-header">
           <div className="logo-placeholder"></div>
-          <h2>Finance<span className="text-emerald">Premium</span></h2>
+          <h2>Poupa<span className="text-emerald">Pila</span></h2>
         </div>
 
         <nav className="sidebar-nav">
