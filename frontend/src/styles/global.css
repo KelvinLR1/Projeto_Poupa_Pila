@@ -4,6 +4,17 @@
   box-sizing: border-box;
 }
 
+/* Remove spinner arrows from number input fields */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
 body {
   font-family: var(--font-family);
   background-color: var(--bg-color);
@@ -40,7 +51,7 @@ button {
   background: none;
 }
 
-/* Utilitários de Glassmorphism Aprimorados */
+/* UtilitÃ¡rios de Glassmorphism Aprimorados */
 .glass {
   background: var(--surface-color);
   border: 1px solid var(--border-color);
@@ -78,7 +89,7 @@ p {
   color: var(--text-secondary);
 }
 
-/* Animações Premium */
+/* AnimaÃ§Ãµes Premium */
 @keyframes fadeIn {
   from { opacity: 0; transform: scale(0.99); }
   to { opacity: 1; transform: scale(1); }
@@ -111,7 +122,7 @@ p {
   animation: slideInLeft 350ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-/* Micro-interações Globais */
+/* Micro-interaÃ§Ãµes Globais */
 button, 
 a,
 input[type="submit"],
@@ -155,7 +166,7 @@ input[type="submit"]:active,
   background: var(--text-muted);
 }
 
-/* Formulários Globais (Inputs, Selects, Wrappers) */
+/* FormulÃ¡rios Globais (Inputs, Selects, Wrappers) */
 .form-group {
   display: flex;
   flex-direction: column;
@@ -209,7 +220,7 @@ input[type="submit"]:active,
   padding-right: 40px;
 }
 
-/* Wrapper para Inputs Monetários */
+/* Wrapper para Inputs MonetÃ¡rios */
 .amount-input-wrapper {
   display: flex;
   align-items: center;
@@ -252,4 +263,117 @@ input[type="submit"]:active,
   letter-spacing: -0.02em;
   width: 100%;
   box-sizing: border-box;
+}
+
+/* ═══════════════════════════════════════════════
+   GLOBAL MOBILE OVERRIDES
+═══════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Page headers */
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .page-title {
+    font-size: 1.3rem;
+  }
+
+  .page-subtitle {
+    font-size: 0.83rem;
+  }
+
+  /* Form rows stack vertically */
+  .form-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Drawers / side panels */
+  .drawer-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0 !important;
+    bottom: 0 !important;
+    top: auto !important;
+    right: 0 !important;
+    height: 92dvh !important;
+    overflow-y: auto;
+  }
+
+  /* No hover lift on touch devices */
+  .glass-card:hover {
+    transform: none;
+    box-shadow: var(--shadow-md);
+  }
+
+  /* Scrollable tables */
+  .data-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Full-width buttons */
+  .btn-mobile-full {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Settings tabs scroll */
+  .settings-tabs-nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .settings-tabs-nav::-webkit-scrollbar { display: none; }
+
+  /* Permission cards: stack */
+  .permission-toggle-row {
+    grid-template-columns: 1fr;
+  }
+
+  /* Tab pane grids: single column */
+  .tab-pane-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Backup: single column */
+  .backup-actions {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-title {
+    font-size: 1.15rem;
+  }
+
+  .glass-card {
+    border-radius: var(--radius-md);
+  }
+
+  /* Prevent iOS zoom on input focus */
+  .form-input,
+  .form-select,
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+@media (max-width: 480px) {
+  .page-title {
+    font-size: 1.15rem;
+  }
+
+  /* Prevent iOS zoom on input focus */
+  .form-input,
+  .form-select,
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }

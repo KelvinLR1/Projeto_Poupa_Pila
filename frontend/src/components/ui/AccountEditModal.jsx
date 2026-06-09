@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useFinance } from '../../context/FinanceContext';
 import { Button } from './Button';
 import { X, Check } from 'lucide-react';
+import { CustomSelect } from './CustomSelect';
 import './PaymentModal.css';
 import './AccountEditModal.css';
 
@@ -70,15 +71,11 @@ export function AccountEditModal({ account, onClose }) {
           <div className="form-row">
             <div className="form-group">
               <label>Tipo de Conta</label>
-              <select
-                className="form-select"
+              <CustomSelect
                 value={type}
                 onChange={e => setType(e.target.value)}
-              >
-                {Object.entries(TYPE_LABELS).map(([val, label]) => (
-                  <option key={val} value={val}>{label}</option>
-                ))}
-              </select>
+                options={Object.entries(TYPE_LABELS).map(([val, label]) => ({ value: val, label }))}
+              />
             </div>
 
             <div className="form-group acc-color-group">

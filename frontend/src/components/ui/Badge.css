@@ -35,3 +35,10 @@
   border: 1px solid rgba(245, 158, 11, 0.25);
   text-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
 }
+
+.badge-purple {
+  background: rgba(139, 92, 246, 0.12);
+  color: #a78bfa;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  text-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
+}

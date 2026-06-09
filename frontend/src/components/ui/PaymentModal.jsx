@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { formatCurrency } from '../../utils/formatters';
+import { formatCurrency, maskCurrencyBRL, parseCurrencyBRL } from '../../utils/formatters';
 import { Button } from '../ui/Button';
 import { Check, Split, X } from 'lucide-react';
 import './PaymentModal.css';
@@ -10,14 +10,32 @@ export function PaymentModal({ transaction, onConfirm, onCancel }) {
   const alreadyPaid = settlements.reduce((acc, s) => acc + s.amount, 0);
   const remaining = transaction.amount - alreadyPaid;
 
-  const [amount, setAmount] = useState(remaining.toFixed(2));
-  const parsedAmount = parseFloat(amount) || 0;
-  const isPartial = parsedAmount < remaining && parsedAmount > 0;
-  const isValid = parsedAmount > 0 && parsedAmount <= remaining;
+  const isForecast = transaction.is_forecast === 1;
+
+  const [actualAmount, setActualAmount] = useState(maskCurrencyBRL(transaction.amount));
+  const [amount, setAmount] = useState(maskCurrencyBRL(remaining));
+
+  const parsedActualAmount = parseCurrencyBRL(actualAmount);
+  const parsedAmount = parseCurrencyBRL(amount);
+
+  const currentRemaining = isForecast ? Math.max(0, parsedActualAmount - alreadyPaid) : remaining;
+
+  const isPartial = parsedAmount < currentRemaining && parsedAmount > 0;
+  const isValid = isForecast
+    ? (parsedActualAmount > 0 && parsedAmount > 0 && parsedAmount <= currentRemaining)
+    : (parsedAmount > 0 && parsedAmount <= remaining);
+
+  const handleActualAmountChange = (val) => {
+    const maskedVal = maskCurrencyBRL(val);
+    setActualAmount(maskedVal);
+    const parsedVal = parseCurrencyBRL(maskedVal);
+    const newRemaining = Math.max(0, parsedVal - alreadyPaid);
+    setAmount(maskCurrencyBRL(newRemaining));
+  };
 
   const handleConfirm = () => {
     if (!isValid) return;
-    onConfirm({ transaction, paidAmount: parsedAmount });
+    onConfirm({ transaction, paidAmount: parsedAmount, actualAmount: isForecast ? parsedActualAmount : null });
   };
 
   return createPortal(
@@ -35,9 +53,21 @@ export function PaymentModal({ transaction, onConfirm, onCancel }) {
         </div>
 
         <div className="modal-body">
+          {isForecast && (
+            <div className="partial-info" style={{ background: 'rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.2)', color: '#c084fc', marginBottom: '15px' }}>
+              <Split size={16} style={{ color: '#c084fc' }} />
+              <div>
+                <strong>Lançamento de Previsão</strong>
+                <p style={{ margin: 0, fontSize: '0.8rem' }}>
+                  Este lançamento possui um valor estimado. Por favor, insira o valor real/final no campo abaixo para atualizar o lançamento e quitá-lo.
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="tx-summary">
             <div className="tx-summary-row">
-              <span>Valor original</span>
+              <span>{isForecast ? 'Valor estimado original' : 'Valor original'}</span>
               <strong>{formatCurrency(transaction.amount)}</strong>
             </div>
             {alreadyPaid > 0 && (
@@ -48,22 +78,36 @@ export function PaymentModal({ transaction, onConfirm, onCancel }) {
             )}
             <div className="tx-summary-row tx-summary-row--divider">
               <span>Saldo pendente</span>
-              <strong className="text-coral">{formatCurrency(remaining)}</strong>
+              <strong className="text-coral">{formatCurrency(currentRemaining)}</strong>
             </div>
           </div>
 
+          {isForecast && (
+            <div className="amount-input-group" style={{ marginBottom: '15px' }}>
+              <label>Valor Real / Final (Total do Lançamento)</label>
+              <div className="amount-input-wrapper" style={{ borderColor: 'rgba(139, 92, 246, 0.4)' }}>
+                <span className="currency-prefix" style={{ color: '#a78bfa' }}>R$</span>
+                <input
+                  type="text"
+                  value={actualAmount}
+                  onChange={(e) => handleActualAmountChange(e.target.value)}
+                  autoFocus
+                  className="amount-input"
+                  style={{ color: '#f8fafc' }}
+                />
+              </div>
+            </div>
+          )}
+
           <div className="amount-input-group">
-            <label>Valor que está sendo pago</label>
+            <label>{isForecast ? 'Valor pago nesta quitação' : 'Valor que está sendo pago'}</label>
             <div className="amount-input-wrapper">
               <span className="currency-prefix">R$</span>
               <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                max={remaining}
+                type="text"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                autoFocus
+                onChange={(e) => setAmount(maskCurrencyBRL(e.target.value))}
+                autoFocus={!isForecast}
                 className="amount-input"
               />
             </div>
@@ -76,7 +120,7 @@ export function PaymentModal({ transaction, onConfirm, onCancel }) {
               <div>
                 <strong>Pagamento parcial</strong>
                 <p>
-                  O saldo pendente será de: <span className="text-coral">{formatCurrency(remaining - parsedAmount)}</span>.
+                  O saldo pendente será de: <span className="text-coral">{formatCurrency(currentRemaining - parsedAmount)}</span>.
                 </p>
               </div>
             </div>
@@ -89,9 +133,9 @@ export function PaymentModal({ transaction, onConfirm, onCancel }) {
             </div>
           )}
 
-          {parsedAmount > remaining && (
+          {parsedAmount > currentRemaining && (
             <div className="error-info">
-              O valor não pode ser maior que o saldo pendente ({formatCurrency(remaining)}).
+              O valor não pode ser maior que o saldo pendente ({formatCurrency(currentRemaining)}).
             </div>
           )}
         </div>

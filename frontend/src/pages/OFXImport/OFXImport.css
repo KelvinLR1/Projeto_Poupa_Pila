@@ -175,20 +175,18 @@
   white-space: nowrap;
 }
 
-.account-select {
+.account-select-custom {
   flex: 1;
-  padding: 10px 16px;
-  background: var(--surface-light);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: 0.95rem;
-  outline: none;
-  cursor: pointer;
 }
 
-.account-select:focus {
+.account-select-custom .custom-select-trigger {
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.account-select-custom.is-open .custom-select-trigger {
   border-color: var(--accent-emerald);
   box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
@@ -305,4 +303,41 @@
 @media (max-width: 640px) {
   .drop-zone { padding: 48px 24px; }
   .ofx-summary { grid-template-columns: 1fr; }
+
+  .account-selector-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .ofx-list-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  .ofx-list-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .ofx-tx-item {
+    padding: 12px 16px;
+    gap: 8px;
+  }
+
+  .import-actions {
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .import-actions button,
+  .import-actions .btn {
+    width: 100% !important;
+    justify-content: center;
+  }
 }
+

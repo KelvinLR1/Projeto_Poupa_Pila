@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { formatCurrency } from '../../utils/formatters';
+import { formatCurrency, maskCurrencyBRL, parseCurrencyBRL } from '../../utils/formatters';
 import { Button } from './Button';
 import { Check, Wallet, X } from 'lucide-react';
+import { CustomDatePicker } from './CustomDatePicker';
 import './PaymentModal.css';
 import './LoanFormModal.css'; /* reaproveitamos type-btn/type-selector */
 
 export function LoanPaymentModal({ loan, onConfirm, onCancel }) {
   const remaining = loan.totalAmount - loan.paidAmount;
-  const [amount, setAmount] = useState(remaining.toFixed(2));
+  const [amount, setAmount] = useState(maskCurrencyBRL(remaining));
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [description, setDescription] = useState('');
-  const parsedAmount = parseFloat(amount) || 0;
+  const parsedAmount = parseCurrencyBRL(amount);
   const isValid = parsedAmount > 0 && parsedAmount <= remaining;
 
   const handleConfirm = () => {
@@ -58,12 +59,9 @@ export function LoanPaymentModal({ loan, onConfirm, onCancel }) {
             <div className="amount-input-wrapper">
               <span className="currency-prefix">R$</span>
               <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                max={remaining}
+                type="text"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => setAmount(maskCurrencyBRL(e.target.value))}
                 autoFocus
                 className="amount-input"
               />
@@ -83,10 +81,7 @@ export function LoanPaymentModal({ loan, onConfirm, onCancel }) {
 
           <div className="form-group" style={{ marginTop: '16px' }}>
             <label>Data da Baixa</label>
-            <input 
-              type="date"
-              required
-              className="form-input"
+            <CustomDatePicker
               value={date}
               onChange={(e) => setDate(e.target.value)}
             />

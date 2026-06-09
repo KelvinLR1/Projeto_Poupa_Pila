@@ -4,70 +4,109 @@ const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem('poupa_pila_token') || null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState('');
 
-  // Carrega o usuário do localStorage ao iniciar a aplicação
+  // Carrega o usuário e valida o token com o backend ao iniciar
   useEffect(() => {
-    const savedUser = localStorage.getItem('poupa_pila_user');
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (e) {
-        localStorage.removeItem('poupa_pila_user');
+    const validateToken = async () => {
+      const savedToken = localStorage.getItem('poupa_pila_token');
+      const savedUser = localStorage.getItem('poupa_pila_user');
+      
+      if (savedToken && savedUser) {
+        try {
+          const res = await fetch('/api/auth/me', {
+            headers: {
+              'Authorization': `Bearer ${savedToken}`
+            }
+          });
+          
+          if (res.ok) {
+            const data = await res.json();
+            setUser(data.user);
+            setToken(savedToken);
+          } else {
+            // Token expirado ou inválido
+            localStorage.removeItem('poupa_pila_token');
+            localStorage.removeItem('poupa_pila_user');
+            setUser(null);
+            setToken(null);
+          }
+        } catch (e) {
+          console.error('Erro de conexão ao validar token:', e);
+          // Em caso de erro de rede, mantém o estado offline caso já estivesse salvo
+          try {
+            setUser(JSON.parse(savedUser));
+          } catch (err) {
+            setUser(null);
+          }
+        }
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+
+    validateToken();
   }, []);
 
-  const login = async (username, password) => {
+  const login = async (username, password, confirmRegister = false) => {
     setAuthError('');
     
-    // Simula um delay de requisição para efeito de carregamento premium
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        if (!username || !password) {
-          setAuthError('Por favor, preencha todos os campos.');
-          resolve(false);
-          return;
-        }
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username, password, confirmRegister })
+      });
 
-        // Senha padrão aceita: "admin" para facilitar o teste local
-        if (password !== 'admin') {
-          setAuthError('Usuário ou senha incorretos.');
-          resolve(false);
-          return;
-        }
+      const data = await res.json();
 
-        // Define o nome de exibição de forma amigável
-        let name = '';
-        const lowerUser = username.toLowerCase().trim();
-        if (lowerUser === 'joao' || lowerUser === 'joão') {
-          name = 'João';
-        } else if (lowerUser === 'kelvin') {
-          name = 'Kelvin';
-        } else if (lowerUser === 'admin') {
-          name = 'Administrador';
-        } else {
-          // Capitaliza o nome digitado
-          name = username.charAt(0).toUpperCase() + username.slice(1);
-        }
+      if (!res.ok) {
+        setAuthError(data.error || 'Usuário ou senha incorretos.');
+        return { success: false };
+      }
 
-        const userData = { username: lowerUser, name };
-        localStorage.setItem('poupa_pila_user', JSON.stringify(userData));
-        setUser(userData);
-        resolve(true);
-      }, 1000);
-    });
+      if (data.status === 'ask_register') {
+        return { success: false, askRegister: true, message: data.message };
+      }
+
+      localStorage.setItem('poupa_pila_token', data.token);
+      localStorage.setItem('poupa_pila_user', JSON.stringify(data.user));
+      
+      setUser(data.user);
+      setToken(data.token);
+      return { success: true };
+    } catch (e) {
+      console.error('Erro ao efetuar login:', e);
+      setAuthError('Erro ao conectar com o servidor.');
+      return { success: false };
+    }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    const savedToken = localStorage.getItem('poupa_pila_token');
+    if (savedToken) {
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${savedToken}`
+          }
+        });
+      } catch (e) {
+        console.error('Erro ao deslogar do servidor:', e);
+      }
+    }
+    localStorage.removeItem('poupa_pila_token');
     localStorage.removeItem('poupa_pila_user');
     setUser(null);
+    setToken(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, loading, authError, login, logout, setAuthError }}>
+    <AuthContext.Provider value={{ user, token, isAuthenticated: !!user, loading, authError, login, logout, setAuthError }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,149 +1,167 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useAuth } from './AuthContext';
 
 const VaultContext = createContext();
 
 const VAULT_COLORS = ['#10b981', '#f43f5e', '#f59e0b', '#6366f1', '#ec4899', '#06b6d4', '#8b5cf6', '#ef4444'];
 
-const initialVault = [
-  {
-    id: 'g1',
-    name: 'Trabalho',
-    color: '#6366f1',
-    subgroups: [
-      {
-        id: 'sg1',
-        name: 'E-mails',
-        entries: [
-          { id: 'e1', name: 'Gmail Corporativo', username: 'kelvin@empresa.com', password: 'G0rp0Email#2024', url: 'https://mail.google.com', notes: '' },
-        ]
-      },
-      {
-        id: 'sg2',
-        name: 'Sistemas Internos',
-        entries: [
-          { id: 'e2', name: 'ERP da Empresa', username: 'kelvin.user', password: 'Erp@Sys2024!', url: 'https://erp.empresa.com.br', notes: 'Trocar senha a cada 90 dias' },
-        ]
-      }
-    ],
-    entries: []
-  },
-  {
-    id: 'g2',
-    name: 'Pessoal',
-    color: '#10b981',
-    subgroups: [
-      {
-        id: 'sg3',
-        name: 'Redes Sociais',
-        entries: [
-          { id: 'e3', name: 'Instagram', username: '@kelvin_lr', password: 'Insta@P3ss0al!', url: 'https://instagram.com', notes: '' },
-        ]
-      }
-    ],
-    entries: [
-      { id: 'e4', name: 'Netflix', username: 'kelvin@gmail.com', password: 'Netf1ix#Casa', url: 'https://netflix.com', notes: 'Plano Premium' },
-    ]
-  },
-  {
-    id: 'g3',
-    name: 'Financeiro',
-    color: '#f59e0b',
-    subgroups: [],
-    entries: [
-      { id: 'e5', name: 'Nubank', username: 'kelvin@gmail.com', password: 'NuB@nk#2024!', url: 'https://nubank.com.br', notes: '' },
-      { id: 'e6', name: 'Itaú Internet Banking', username: '0001.123456', password: 'It@uBank2024', url: 'https://itau.com.br', notes: 'Agência 0001, Conta 123456-7' },
-    ]
-  }
-];
-
 export function VaultProvider({ children }) {
-  const [vault, setVault] = useState(initialVault);
+  const { token, isAuthenticated } = useAuth();
+  const [vault, setVault] = useState([]);
 
   const generateId = () => Math.random().toString(36).substr(2, 9);
 
-  // ─── Groups ───
-  const addGroup = ({ name, color }) => {
-    setVault(prev => [...prev, {
-      id: generateId(),
-      name: name.trim(),
-      color: color || VAULT_COLORS[0],
-      subgroups: [],
-      entries: []
-    }]);
+  // Busca a árvore do cofre de senhas do backend
+  const fetchVaultData = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch('/api/vault/data', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setVault(data || []);
+      }
+    } catch (e) {
+      console.error('Erro ao buscar dados do cofre no backend:', e);
+    }
   };
 
-  const deleteGroup = (groupId) => {
-    setVault(prev => prev.filter(g => g.id !== groupId));
+  // Carrega ao logar
+  useEffect(() => {
+    if (isAuthenticated && token) {
+      fetchVaultData();
+    } else {
+      setVault([]);
+    }
+  }, [isAuthenticated, token]);
+
+  // ─── Groups ───
+  const addGroup = async ({ name, color }) => {
+    const id = generateId();
+    try {
+      const res = await fetch('/api/vault/groups', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ id, name, color })
+      });
+      if (res.ok) {
+        await fetchVaultData();
+      }
+    } catch (e) {
+      console.error('Erro ao adicionar grupo no cofre:', e);
+    }
+  };
+
+  const deleteGroup = async (groupId) => {
+    try {
+      const res = await fetch(`/api/vault/groups/${groupId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        await fetchVaultData();
+      }
+    } catch (e) {
+      console.error('Erro ao excluir grupo do cofre:', e);
+    }
   };
 
   // ─── Subgroups ───
-  const addSubgroup = (groupId, { name }) => {
-    setVault(prev => prev.map(g =>
-      g.id === groupId
-        ? { ...g, subgroups: [...(g.subgroups || []), { id: generateId(), name: name.trim(), entries: [] }] }
-        : g
-    ));
+  const addSubgroup = async (groupId, { name }) => {
+    const id = generateId();
+    try {
+      const res = await fetch('/api/vault/subgroups', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ id, groupId, name })
+      });
+      if (res.ok) {
+        await fetchVaultData();
+      }
+    } catch (e) {
+      console.error('Erro ao adicionar subgrupo no cofre:', e);
+    }
   };
 
-  const deleteSubgroup = (groupId, subgroupId) => {
-    setVault(prev => prev.map(g =>
-      g.id === groupId
-        ? { ...g, subgroups: (g.subgroups || []).filter(sg => sg.id !== subgroupId) }
-        : g
-    ));
+  const deleteSubgroup = async (groupId, subgroupId) => {
+    try {
+      const res = await fetch(`/api/vault/subgroups/${groupId}/${subgroupId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        await fetchVaultData();
+      }
+    } catch (e) {
+      console.error('Erro ao deletar subgrupo do cofre:', e);
+    }
   };
 
   // ─── Entries ───
-  const addEntry = (groupId, subgroupId, entryData) => {
-    const entry = { id: generateId(), ...entryData };
-    setVault(prev => prev.map(g => {
-      if (g.id !== groupId) return g;
-      if (subgroupId) {
-        return {
-          ...g,
-          subgroups: (g.subgroups || []).map(sg =>
-            sg.id === subgroupId
-              ? { ...sg, entries: [...sg.entries, entry] }
-              : sg
-          )
-        };
+  const addEntry = async (groupId, subgroupId, entryData) => {
+    const id = generateId();
+    try {
+      const res = await fetch('/api/vault/entries', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ id, groupId, subgroupId, ...entryData })
+      });
+      if (res.ok) {
+        await fetchVaultData();
       }
-      return { ...g, entries: [...(g.entries || []), entry] };
-    }));
+    } catch (e) {
+      console.error('Erro ao adicionar credencial no cofre:', e);
+    }
   };
 
-  const editEntry = (groupId, subgroupId, entryId, entryData) => {
-    setVault(prev => prev.map(g => {
-      if (g.id !== groupId) return g;
-      if (subgroupId) {
-        return {
-          ...g,
-          subgroups: (g.subgroups || []).map(sg =>
-            sg.id === subgroupId
-              ? { ...sg, entries: sg.entries.map(e => e.id === entryId ? { ...e, ...entryData } : e) }
-              : sg
-          )
-        };
+  const editEntry = async (groupId, subgroupId, entryId, entryData) => {
+    try {
+      const res = await fetch(`/api/vault/entries/${entryId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(entryData)
+      });
+      if (res.ok) {
+        await fetchVaultData();
       }
-      return { ...g, entries: (g.entries || []).map(e => e.id === entryId ? { ...e, ...entryData } : e) };
-    }));
+    } catch (e) {
+      console.error('Erro ao editar credencial no cofre:', e);
+    }
   };
 
-  const deleteEntry = (groupId, subgroupId, entryId) => {
-    setVault(prev => prev.map(g => {
-      if (g.id !== groupId) return g;
-      if (subgroupId) {
-        return {
-          ...g,
-          subgroups: (g.subgroups || []).map(sg =>
-            sg.id === subgroupId
-              ? { ...sg, entries: sg.entries.filter(e => e.id !== entryId) }
-              : sg
-          )
-        };
+  const deleteEntry = async (groupId, subgroupId, entryId) => {
+    try {
+      const res = await fetch(`/api/vault/entries/${groupId}/${subgroupId || 'null'}/${entryId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        await fetchVaultData();
       }
-      return { ...g, entries: (g.entries || []).filter(e => e.id !== entryId) };
-    }));
+    } catch (e) {
+      console.error('Erro ao excluir credencial do cofre:', e);
+    }
   };
 
   return (
@@ -168,3 +186,4 @@ export function useVault() {
   if (!ctx) throw new Error('useVault must be inside VaultProvider');
   return ctx;
 }
+

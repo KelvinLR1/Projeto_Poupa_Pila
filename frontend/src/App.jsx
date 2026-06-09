@@ -6,8 +6,10 @@ import { Loans } from './pages/Loans/Loans'
 import { Accounts } from './pages/Accounts/Accounts'
 import { OFXImport } from './pages/OFXImport/OFXImport'
 import { Vault } from './pages/Vault/Vault'
+import { CashFlow } from './pages/CashFlow/CashFlow'
 import { useAuth } from './context/AuthContext'
 import { Login } from './pages/Login/Login'
+import { Settings } from './pages/Settings/Settings'
 
 function App() {
   const { isAuthenticated, loading } = useAuth()
@@ -42,9 +44,11 @@ function App() {
         <Transactions filterAccountId={filterAccountId} setFilterAccountId={setFilterAccountId} />
       )}
       {activeTab === 'loans' && <Loans />}
+      {activeTab === 'cashflow' && <CashFlow />}
       {activeTab === 'accounts' && <Accounts />}
       {activeTab === 'ofx' && <OFXImport />}
       {activeTab === 'vault' && <Vault />}
+      {activeTab === 'settings' && <Settings />}
     </Layout>
   )
 }

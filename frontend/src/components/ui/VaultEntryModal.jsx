@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useVault } from '../../context/VaultContext';
 import { X, Eye, EyeOff, RefreshCw } from 'lucide-react';
+import { CustomSelect } from './CustomSelect';
 import './VaultEntryModal.css';
 
 function generatePassword(length = 16) {
@@ -61,26 +62,21 @@ export function VaultEntryModal({ mode, groupId, subgroupId, entry, onClose }) {
           <div className="vault-modal-row">
             <div className="form-group">
               <label>Grupo</label>
-              <select
-                className="form-select"
+              <CustomSelect
                 value={form.targetGroupId}
                 onChange={e => handleGroupChange(e.target.value)}
-                required
-              >
-                <option value="">Selecione...</option>
-                {vault.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-              </select>
+                placeholder="Selecione..."
+                options={vault.map(g => ({ value: g.id, label: g.name }))}
+              />
             </div>
             <div className="form-group">
               <label>Subgrupo <span className="label-optional">(opcional)</span></label>
-              <select
-                className="form-select"
+              <CustomSelect
                 value={form.targetSubgroupId}
                 onChange={e => handleChange('targetSubgroupId', e.target.value)}
-              >
-                <option value="">— Diretamente no grupo —</option>
-                {subgroupOptions.map(sg => <option key={sg.id} value={sg.id}>{sg.name}</option>)}
-              </select>
+                placeholder="— Diretamente no grupo —"
+                options={subgroupOptions.map(sg => ({ value: sg.id, label: sg.name }))}
+              />
             </div>
           </div>
 

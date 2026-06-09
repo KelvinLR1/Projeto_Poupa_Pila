@@ -1,4 +1,4 @@
-.transactions-page {
+﻿.transactions-page {
   display: flex;
   flex-direction: column;
   gap: 32px;
@@ -204,31 +204,177 @@
   align-items: center;
 }
 
-.account-filter-select {
-  padding: 10px 36px 10px 16px;
+.account-filter-select-custom {
+  min-width: 180px;
+}
+
+.account-filter-select-custom .custom-select-trigger {
+  padding: 10px 16px;
+  font-size: 0.875rem;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: 0.875rem;
-  outline: none;
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23a1a1aa'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  background-size: 14px;
-  transition: all var(--transition-fast);
   box-shadow: none;
 }
 
-.account-filter-select:hover {
+.account-filter-select-custom .custom-select-trigger:hover {
   background-color: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.2);
 }
 
-.account-filter-select:focus {
+.account-filter-select-custom.is-open .custom-select-trigger {
   border-color: var(--accent-emerald);
   box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
 }
+
+/* -----------------------------------------------
+   MOBILE RESPONSIVE - Transactions / Extrato
+----------------------------------------------- */
+@media (max-width: 768px) {
+  .transaction-filters {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .filter-group {
+    width: 100%;
+  }
+
+  .account-filter-select-custom {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .transactions-list-card {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  .transaction-item {
+    padding: 12px 14px;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    border-bottom: none;
+  }
+
+  .transaction-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .tx-icon {
+    width: 36px;
+    height: 36px;
+    margin-right: 10px;
+  }
+
+  .tx-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .tx-details {
+    min-width: 0;
+  }
+
+  .tx-details h4 {
+    font-size: 0.88rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tx-details p {
+    font-size: 0.76rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tx-amount-col {
+    width: auto;
+    min-width: 90px;
+    gap: 4px;
+    flex-shrink: 0;
+    align-items: flex-end;
+  }
+
+  .tx-amount {
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .tx-amount.text-emerald {
+    text-shadow: 0 0 8px rgba(16, 185, 129, 0.2);
+  }
+
+  .tx-amount-col .badge {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    padding: 2px 6px !important;
+    font-size: 0.65rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    text-shadow: none !important;
+    border-radius: 4px !important;
+  }
+
+  .tx-amount-col .badge::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .tx-amount-col .badge-success {
+    color: var(--accent-emerald) !important;
+    background: rgba(16, 185, 129, 0.08) !important;
+    border-color: rgba(16, 185, 129, 0.15) !important;
+  }
+
+  .tx-amount-col .badge-success::before {
+    background-color: var(--accent-emerald);
+    box-shadow: 0 0 4px var(--accent-emerald);
+  }
+
+  .tx-amount-col .badge-warning {
+    color: var(--accent-gold) !important;
+    background: rgba(245, 158, 11, 0.08) !important;
+    border-color: rgba(245, 158, 11, 0.15) !important;
+  }
+
+  .tx-amount-col .badge-warning::before {
+    background-color: var(--accent-gold);
+    box-shadow: 0 0 4px var(--accent-gold);
+  }
+
+  .tx-amount-col .badge-danger {
+    color: var(--accent-coral) !important;
+    background: rgba(244, 63, 94, 0.08) !important;
+    border-color: rgba(244, 63, 94, 0.15) !important;
+  }
+
+  .tx-amount-col .badge-danger::before {
+    background-color: var(--accent-coral);
+    box-shadow: 0 0 4px var(--accent-coral);
+  }
+
+  .tx-actions {
+    width: auto;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
+

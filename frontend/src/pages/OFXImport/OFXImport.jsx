@@ -10,6 +10,7 @@ import {
   RefreshCw, AlertTriangle, CheckCircle, XCircle, Landmark
 } from 'lucide-react';
 import './OFXImport.css';
+import { CustomSelect } from '../../components/ui/CustomSelect';
 
 // Calcula a similaridade entre dois textos (para conciliação)
 function similarity(a = '', b = '') {
@@ -205,11 +206,12 @@ export function OFXImport() {
           {/* Seleção de conta */}
           <GlassCard className="account-selector-card">
             <label>Vincular transações à conta:</label>
-            <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className="account-select">
-              {accounts.map(acc => (
-                <option key={acc.id} value={acc.id}>{acc.name}</option>
-              ))}
-            </select>
+            <CustomSelect
+              value={accountId}
+              onChange={(e) => setAccountId(e.target.value)}
+              className="account-select-custom"
+              options={accounts.map(acc => ({ value: acc.id, label: acc.name }))}
+            />
           </GlassCard>
 
           {/* Lista de transações */}

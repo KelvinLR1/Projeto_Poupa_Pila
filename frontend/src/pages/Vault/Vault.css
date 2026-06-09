@@ -528,3 +528,35 @@
     max-height: 200px;
   }
 }
+
+@media (max-width: 768px) {
+  .vault-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .vault-title-row {
+    width: 100%;
+  }
+
+  .vault-header-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .vault-header-actions button,
+  .vault-header-actions .btn {
+    width: 100% !important;
+    justify-content: center;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+  }
+
+  .vault-entries-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

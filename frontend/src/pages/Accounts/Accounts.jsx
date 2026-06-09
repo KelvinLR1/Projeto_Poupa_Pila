@@ -1,25 +1,27 @@
 import React, { useState } from 'react';
 import { useFinance } from '../../context/FinanceContext';
-import { formatCurrency } from '../../utils/formatters';
+import { formatCurrency, maskCurrencyBRL, parseCurrencyBRL } from '../../utils/formatters';
 import { GlassCard } from '../../components/ui/GlassCard';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { AccountEditModal } from '../../components/ui/AccountEditModal';
 import { Plus, Wallet, Building2, Landmark, Check, Activity, Pencil, EyeOff, Eye } from 'lucide-react';
+import { CustomSelect } from '../../components/ui/CustomSelect';
 import './Accounts.css';
 
 export function Accounts() {
   const { accounts, addAccount, toggleAccountStatus, hideValues } = useFinance();
   const [isAdding, setIsAdding]           = useState(false);
   const [editingAccount, setEditingAccount] = useState(null);
-  const [newAccount, setNewAccount]       = useState({ name: '', type: 'checking', color: '#10b981', initialBalance: 0 });
+  const [newAccount, setNewAccount]       = useState({ name: '', type: 'checking', color: '#10b981', initialBalance: '' });
 
   const handleAdd = (e) => {
     e.preventDefault();
     if (!newAccount.name) return;
-    addAccount(newAccount);
+    const parsedBalance = parseCurrencyBRL(newAccount.initialBalance);
+    addAccount({ ...newAccount, initialBalance: parsedBalance });
     setIsAdding(false);
-    setNewAccount({ name: '', type: 'checking', color: '#10b981', initialBalance: 0 });
+    setNewAccount({ name: '', type: 'checking', color: '#10b981', initialBalance: '' });
   };
 
   const getIconForType = (type) => {
@@ -140,25 +142,25 @@ export function Accounts() {
             <div className="form-row">
               <div className="form-group">
                 <label>Tipo de Conta</label>
-                <select
-                  className="form-select"
+                <CustomSelect
                   value={newAccount.type}
                   onChange={(e) => setNewAccount({ ...newAccount, type: e.target.value })}
-                >
-                  <option value="checking">Conta Corrente</option>
-                  <option value="savings">Poupança</option>
-                  <option value="investment">Investimento</option>
-                  <option value="wallet">Carteira Física</option>
-                </select>
+                  options={[
+                    { value: 'checking', label: 'Conta Corrente' },
+                    { value: 'savings', label: 'Poupança' },
+                    { value: 'investment', label: 'Investimento' },
+                    { value: 'wallet', label: 'Carteira Física' }
+                  ]}
+                />
               </div>
               <div className="form-group">
                 <label>Saldo Inicial (R$)</label>
                 <input
-                  type="number"
-                  step="0.01"
+                  type="text"
                   className="form-input"
                   value={newAccount.initialBalance}
-                  onChange={(e) => setNewAccount({ ...newAccount, initialBalance: parseFloat(e.target.value) || 0 })}
+                  onChange={(e) => setNewAccount({ ...newAccount, initialBalance: maskCurrencyBRL(e.target.value) })}
+                  placeholder="0,00"
                 />
               </div>
               <div className="form-group">

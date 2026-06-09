@@ -1,4 +1,4 @@
-.accounts-page {
+﻿.accounts-page {
   display: flex;
   flex-direction: column;
   gap: 32px;
@@ -103,7 +103,7 @@
   justify-content: center;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  /* A cor do ícone é passada inline no JSX */
+  /* A cor do Ã­cone Ã© passada inline no JSX */
 }
 
 .acc-title h4 {
@@ -153,7 +153,7 @@
   }
 }
 
-/* ── Botões de ação do card ───────────────── */
+/* â”€â”€ BotÃµes de aÃ§Ã£o do card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .acc-card-actions {
   display: flex;
   gap: 6px;
@@ -197,7 +197,7 @@
   color: var(--accent-emerald);
 }
 
-/* ── Conta inativa ────────────────────────── */
+/* â”€â”€ Conta inativa â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .acc-inactive {
   opacity: 0.55;
   filter: grayscale(40%);
@@ -209,7 +209,7 @@
   filter: grayscale(20%);
 }
 
-/* ── Seção de contas inativas ─────────────── */
+/* â”€â”€ SeÃ§Ã£o de contas inativas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .acc-section-title {
   display: flex;
   align-items: center;
@@ -220,5 +220,32 @@
   letter-spacing: 0.09em;
   color: var(--text-muted);
   margin: 0 0 16px 0;
+}
+
+
+/* -----------------------------------------------
+   MOBILE RESPONSIVE — Accounts / CashFlow
+----------------------------------------------- */
+@media (max-width: 768px) {
+  .accounts-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .acc-card-header {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .form-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .form-actions button,
+  .form-actions .btn {
+    width: 100% !important;
+    justify-content: center;
+  }
 }
 

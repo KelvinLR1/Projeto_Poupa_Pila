@@ -1,4 +1,4 @@
-.loans-page {
+﻿.loans-page {
   display: flex;
   flex-direction: column;
   gap: 28px;
@@ -299,5 +299,61 @@
   
   .loans-summary-cards {
     grid-template-columns: 1fr;
+  }
+}
+
+/* -----------------------------------------------
+   MOBILE RESPONSIVE — Loans
+----------------------------------------------- */
+@media (max-width: 768px) {
+  .loans-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .loan-card-header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .loan-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .loan-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
+.loan-page-actions {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+@media (max-width: 768px) {
+  .loan-page-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .loan-page-actions .toggle-switch {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .loan-page-actions button,
+  .loan-page-actions .btn {
+    width: 100% !important;
+    justify-content: center;
   }
 }

@@ -44,3 +44,224 @@
   --transition-normal: 400ms cubic-bezier(0.16, 1, 0.3, 1);
   --transition-slow: 700ms cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+/* ==========================================
+   LIGHT THEME OVERRIDES (Glassmorphism Light)
+   ========================================== */
+:root.light-theme {
+  --bg-color: #f4f4f7;
+  --surface-color: rgba(255, 255, 255, 0.45);
+  --surface-light: rgba(255, 255, 255, 0.75);
+  --border-color: rgba(0, 0, 0, 0.08);
+  --border-highlight: rgba(255, 255, 255, 0.7);
+  
+  --text-primary: #121216;
+  --text-secondary: #4b5563;
+  --text-muted: #8c95a0;
+  
+  --shadow-sm: 0 4px 12px -2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 12px 32px -4px rgba(0, 0, 0, 0.1), inset 0 1px 0 0 rgba(255, 255, 255, 0.8);
+  
+  --accent-emerald-light: rgba(16, 185, 129, 0.08);
+  --accent-coral-light: rgba(244, 63, 94, 0.08);
+  --accent-gold-light: rgba(245, 158, 11, 0.08);
+}
+
+/* Light Theme overrides for layout components */
+.light-theme .sidebar {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.5) 0%, rgba(235, 235, 240, 0.7) 100%);
+  border-right-color: rgba(0, 0, 0, 0.05);
+}
+
+.light-theme .main-content {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.light-theme .topbar {
+  background: rgba(255, 255, 255, 0.5);
+  border-bottom-color: rgba(0, 0, 0, 0.05);
+}
+
+.light-theme .form-input, 
+.light-theme .form-select,
+.light-theme .amount-input-wrapper,
+.light-theme .custom-select-trigger,
+.light-theme .custom-datepicker-trigger {
+  background: rgba(255, 255, 255, 0.6);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #121216;
+}
+
+.light-theme .form-input::placeholder,
+.light-theme .custom-select-trigger .placeholder,
+.light-theme .custom-datepicker-trigger .placeholder {
+  color: #8c95a0;
+}
+
+.light-theme .form-input:focus,
+.light-theme .form-select:focus,
+.light-theme .amount-input-wrapper:focus-within,
+.light-theme .custom-select-trigger:hover,
+.light-theme .custom-datepicker-trigger:hover {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.light-theme .custom-select-options,
+.light-theme .custom-datepicker-calendar {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.light-theme .custom-select-option:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.light-theme .calendar-day-cell:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.light-theme .calendar-day-cell.other-month {
+  color: #000;
+  opacity: 0.25;
+}
+
+.light-theme .text-emerald {
+  text-shadow: none;
+}
+
+.light-theme .user-name {
+  background: linear-gradient(90deg, #121216 0%, #4b5563 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ==========================================
+   GLASS CARD OVERRIDES
+   ========================================== */
+.light-theme .glass-card-component {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.55) 0%, rgba(240, 240, 245, 0.65) 100%) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  border-top-color: rgba(255, 255, 255, 0.8) !important;
+  border-left-color: rgba(255, 255, 255, 0.6) !important;
+  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.06) !important;
+}
+
+.light-theme .glass-card-component::before {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent) !important;
+}
+
+.light-theme .glass-card-component::after {
+  background: radial-gradient(ellipse at 20% 0%, rgba(255, 255, 255, 0.35), transparent 70%) !important;
+}
+
+.light-theme .glass-card-component.clickable:hover {
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  border-top-color: rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 
+    0 12px 32px -4px rgba(0, 0, 0, 0.06),
+    0 24px 48px -12px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* ==========================================
+   MODALS & OVERLAYS OVERRIDES
+   ========================================== */
+.light-theme .modal-container,
+.light-theme .vault-modal,
+.light-theme .loan-modal,
+.light-theme .account-modal {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.98) 0%, rgba(240, 240, 245, 0.99) 100%) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  border-top-color: rgba(255, 255, 255, 0.8) !important;
+  box-shadow: 
+    0 40px 100px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+}
+
+.light-theme .modal-header,
+.light-theme .vault-modal-header,
+.light-theme .modal-footer,
+.light-theme .vault-modal-footer {
+  border-color: rgba(0, 0, 0, 0.05) !important;
+  background: rgba(0, 0, 0, 0.02) !important;
+}
+
+.light-theme .close-btn,
+.light-theme .vault-modal-close,
+.light-theme .btn-cancel {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border-color: rgba(0, 0, 0, 0.05) !important;
+  color: var(--text-secondary) !important;
+}
+
+.light-theme .close-btn:hover,
+.light-theme .vault-modal-close:hover,
+.light-theme .btn-cancel:hover {
+  background: rgba(0, 0, 0, 0.06) !important;
+  color: var(--text-primary) !important;
+}
+
+.light-theme .tx-summary {
+  background: rgba(0, 0, 0, 0.02) !important;
+  border-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+.light-theme .currency-prefix {
+  border-right-color: rgba(0, 0, 0, 0.06) !important;
+  background: rgba(0, 0, 0, 0.01) !important;
+}
+
+/* ==========================================
+   DASHBOARD CARDS
+   ========================================== */
+.light-theme .total-balance-card {
+  background: 
+    linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.02) 50%, transparent 100%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.65) 0%, rgba(240, 240, 245, 0.8) 100%) !important;
+}
+
+/* ==========================================
+   LIST HOVERS
+   ========================================== */
+.light-theme .transaction-item:hover,
+.light-theme .account-card:hover {
+  background: rgba(0, 0, 0, 0.02) !important;
+}
+
+/* ==========================================
+   DRAWERS & FORMS
+   ========================================== */
+.light-theme .drawer-content {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.98) 0%, rgba(240, 240, 245, 1) 100%) !important;
+  border-left-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* ==========================================
+   SETTINGS STUFF
+   ========================================== */
+.light-theme .settings-tab-btn:hover {
+  background: rgba(0, 0, 0, 0.02) !important;
+}
+
+.light-theme .color-selector-btn {
+  background: rgba(0, 0, 0, 0.01) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+.light-theme .color-selector-btn:hover {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+.light-theme .color-selector-btn.active {
+  background: rgba(0, 0, 0, 0.01) !important;
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 0 10px rgba(0, 0, 0, 0.02) !important;
+}
+
+.light-theme .theme-btn.active {
+  background: rgba(0, 0, 0, 0.04) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+}
+

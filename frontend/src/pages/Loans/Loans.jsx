@@ -106,7 +106,7 @@ export function Loans() {
           <h2 className="page-title">Controle de Empréstimos</h2>
           <p className="page-subtitle">Gerencie o dinheiro que você emprestou ou pegou emprestado.</p>
         </div>
-        <div className="page-actions" style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+        <div className="page-actions loan-page-actions">
           <label className="toggle-switch">
             <input 
               type="checkbox" 

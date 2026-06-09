@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 import { useFinance } from '../../context/FinanceContext';
 import { Button } from './Button';
 import { X, ArrowUpRight, ArrowDownRight, Info } from 'lucide-react';
+import { CustomDatePicker } from './CustomDatePicker';
+import { maskCurrencyBRL, parseCurrencyBRL } from '../../utils/formatters';
 import './LoanFormModal.css';
 import './PaymentModal.css';
 
@@ -21,12 +23,13 @@ export function LoanFormModal({ onClose, initialCounterpart = '', initialType = 
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!counterpart || !totalAmount || !dueDate) return;
+    const parsedAmount = parseCurrencyBRL(totalAmount);
+    if (!counterpart || parsedAmount <= 0 || !dueDate) return;
 
     addLoan({
       type,
       counterpart,
-      amount: parseFloat(totalAmount),
+      amount: parsedAmount,
       date,
       dueDate,
       description: description || (type === 'lent' ? 'Valor emprestado' : 'Valor pego emprestado')
@@ -113,13 +116,11 @@ export function LoanFormModal({ onClose, initialCounterpart = '', initialType = 
             <div className="amount-input-wrapper">
               <span className="currency-prefix">R$</span>
               <input 
-                type="number" 
-                step="0.01" 
-                min="0.01"
+                type="text" 
                 required
                 className="amount-input"
                 value={totalAmount}
-                onChange={(e) => setTotalAmount(e.target.value)}
+                onChange={(e) => setTotalAmount(maskCurrencyBRL(e.target.value))}
                 placeholder="0,00"
               />
             </div>
@@ -128,20 +129,14 @@ export function LoanFormModal({ onClose, initialCounterpart = '', initialType = 
           <div className="form-row">
             <div className="form-group">
               <label>Data de Registro</label>
-              <input 
-                type="date" 
-                required
-                className="form-input"
+              <CustomDatePicker
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
               />
             </div>
             <div className="form-group">
               <label>Data de Vencimento</label>
-              <input 
-                type="date" 
-                required
-                className="form-input"
+              <CustomDatePicker
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
               />

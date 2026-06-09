@@ -37,6 +37,9 @@ export function TransactionDetailsModal({ transaction, onCancel, onPayRemaining 
               <h3>{transaction.description}</h3>
               <div className="tx-header-meta">
                 <Badge variant="default">{transaction.category}</Badge>
+                {transaction.is_forecast === 1 && (
+                  <Badge variant="purple">Previsão</Badge>
+                )}
                 <span className="tx-date-chip">
                   <Calendar size={12} />
                   {formatDate(transaction.date)}
@@ -55,7 +58,9 @@ export function TransactionDetailsModal({ transaction, onCancel, onPayRemaining 
           {/* Resumo financeiro */}
           <div className="tx-financial-summary">
             <div className="tx-summary-main">
-              <span className="tx-summary-label">Valor Total</span>
+              <span className="tx-summary-label">
+                {transaction.is_forecast === 1 ? 'Valor Total Estimado' : 'Valor Total'}
+              </span>
               <strong className={`tx-summary-amount ${isIncome ? 'text-emerald' : ''}`}>
                 {isIncome ? '+' : '−'}{formatCurrency(transaction.amount)}
               </strong>

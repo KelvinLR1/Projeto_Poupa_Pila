@@ -1,0 +1,491 @@
+﻿/* CashFlow page styles */
+.cashflow-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.cashflow-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.period-selector {
+  display: flex;
+  padding: 4px;
+  gap: 4px;
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+}
+
+.period-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.period-btn:hover {
+  color: #f8fafc;
+}
+
+.period-btn.active {
+  background: #10b981;
+  color: #020617;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* Summary Grid */
+.cashflow-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.cashflow-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+}
+
+.cashflow-card .card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cashflow-card .card-title {
+  font-size: 14px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.cashflow-card .card-value {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.cashflow-card .card-desc {
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* Warnings and Alerts */
+.cashflow-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px 20px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  transition: all 0.3s ease;
+}
+
+.cashflow-alert.danger {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+
+.cashflow-alert.danger h4 {
+  color: #ef4444;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.cashflow-alert.success {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  color: #a7f3d0;
+}
+
+.cashflow-alert.success h4 {
+  color: #10b981;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+/* Custom SVG Chart */
+.chart-wrapper {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.chart-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.svg-container {
+  position: relative;
+  width: 100%;
+}
+
+.cashflow-svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.chart-line {
+  fill: none;
+  stroke: #10b981;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0px 4px 10px rgba(16, 185, 129, 0.4));
+  animation: drawLine 1.5s ease-out forwards;
+}
+
+.zero-line {
+  stroke: rgba(239, 68, 68, 0.4);
+  stroke-width: 1.5;
+  stroke-dasharray: 4, 4;
+}
+
+.chart-point {
+  fill: #0f172a;
+  stroke: #10b981;
+  stroke-width: 2.5;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chart-point:hover {
+  fill: #10b981;
+  r: 7;
+}
+
+.chart-point.has-events {
+  fill: #10b981;
+  stroke: #ffffff;
+}
+
+.chart-point.negative {
+  stroke: #ef4444;
+}
+
+.chart-point.negative:hover {
+  fill: #ef4444;
+}
+
+/* Tooltip */
+.chart-tooltip {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  padding: 12px;
+  border-radius: 12px;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 120px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 10;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(8px);
+}
+
+.tooltip-date {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.tooltip-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.tooltip-events {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.tooltip-ev-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tooltip-ev-tag.income {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+
+.tooltip-ev-tag.expense {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+
+.tooltip-ev-more {
+  font-size: 9px;
+  color: #64748b;
+  align-self: center;
+}
+
+/* Projections Table */
+.timeline-wrapper {
+  padding: 24px;
+}
+
+.timeline-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.timeline-table th {
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #94a3b8;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.timeline-table td {
+  padding: 14px 16px;
+  font-size: 14px;
+  color: #e2e8f0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.timeline-table tr:last-child td {
+  border-bottom: none;
+}
+
+.timeline-table tr.deficit-row td {
+  background: rgba(239, 68, 68, 0.02);
+}
+
+.category-badge {
+  background: rgba(51, 65, 85, 0.5);
+  color: #cbd5e1;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.source-badge {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.source-badge.transaction {
+  background: rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
+}
+
+.source-badge.loan {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fde047;
+}
+
+.source-badge.previsao {
+  background: rgba(139, 92, 246, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.empty-timeline {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+  color: #64748b;
+  font-size: 14px;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes drawLine {
+  from {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+  }
+  to {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s infinite ease-in-out;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.1), inset 0 0 10px rgba(239, 68, 68, 0.05);
+    border-color: rgba(239, 68, 68, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.25), inset 0 0 15px rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.5);
+  }
+}
+
+/* -----------------------------------------------
+   MOBILE RESPONSIVE - CashFlow
+----------------------------------------------- */
+@media (max-width: 768px) {
+  .cashflow-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .cashflow-controls {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .cashflow-summary-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .cashflow-chart-wrapper {
+    overflow-x: auto;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  /* Table to Cards layout */
+  .timeline-table thead {
+    display: none;
+  }
+
+  .timeline-table, 
+  .timeline-table tbody, 
+  .timeline-table tr, 
+  .timeline-table td {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .timeline-table tr {
+    padding: 16px;
+    margin-bottom: 16px;
+    border-radius: var(--radius-md, 12px);
+    background: rgba(255, 255, 255, 0.01);
+    border: 1px solid var(--border-color);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px 12px;
+    align-items: center;
+  }
+
+  .timeline-table tr.deficit-row {
+    background: rgba(239, 68, 68, 0.03);
+    border-color: rgba(239, 68, 68, 0.2);
+  }
+
+  .timeline-table td {
+    border-bottom: none !important;
+  }
+
+  /* Description - top left */
+  .timeline-table td:nth-child(2) {
+    grid-column: 1 / 2;
+    order: 1;
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 0;
+    color: var(--text-primary);
+  }
+
+  /* Amount - top right */
+  .timeline-table td:nth-child(4) {
+    grid-column: 2 / 3;
+    order: 2;
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 0;
+    text-align: right;
+  }
+
+  /* Date - row 2 left */
+  .timeline-table td:nth-child(1) {
+    grid-column: 1 / 2;
+    order: 3;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    padding: 0;
+  }
+
+  /* Category Badge - row 2 right */
+  .timeline-table td:nth-child(3) {
+    grid-column: 2 / 3;
+    order: 4;
+    padding: 0;
+    text-align: right;
+  }
+
+  /* Source - row 3 left */
+  .timeline-table td:nth-child(5) {
+    grid-column: 1 / 2;
+    order: 5;
+    padding: 0;
+  }
+
+  /* Running Balance - row 3 right */
+  .timeline-table td:nth-child(6) {
+    grid-column: 2 / 3;
+    order: 6;
+    padding: 0;
+    text-align: right;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .timeline-table td:nth-child(6)::before {
+    content: "Saldo: ";
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: normal;
+  }
+}

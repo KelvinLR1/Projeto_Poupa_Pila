@@ -9,6 +9,7 @@ import { TransactionDetailsModal } from '../../components/ui/TransactionDetailsM
 import { TransactionFormDrawer } from '../../components/ui/TransactionFormDrawer';
 import { ArrowUpRight, ArrowDownRight, Search, Filter, Plus, Check } from 'lucide-react';
 import './Transactions.css';
+import { CustomSelect } from '../../components/ui/CustomSelect';
 
 export function Transactions({ filterAccountId, setFilterAccountId }) {
   const { transactions, accounts, hideValues, markTransactionAsPaid } = useFinance();
@@ -18,8 +19,8 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
   const [selectedTxForDetails, setSelectedTxForDetails] = useState(null);
   const [isAddingTransaction, setIsAddingTransaction] = useState(false);
 
-  const handleConfirmPayment = ({ transaction, paidAmount }) => {
-    markTransactionAsPaid(transaction.id, paidAmount);
+  const handleConfirmPayment = ({ transaction, paidAmount, actualAmount }) => {
+    markTransactionAsPaid(transaction.id, paidAmount, actualAmount);
     setSelectedTxForPayment(null);
   };
 
@@ -100,16 +101,15 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
           </div>
           
           <div className="account-select-wrapper">
-            <select 
-              className="account-filter-select glass"
+            <CustomSelect
+              className="account-filter-select-custom"
               value={filterAccountId}
               onChange={e => setFilterAccountId(e.target.value)}
-            >
-              <option value="all">Todas as Contas</option>
-              {accounts.map(acc => (
-                <option key={acc.id} value={acc.id}>{acc.name}</option>
-              ))}
-            </select>
+              options={[
+                { value: 'all', label: 'Todas as Contas' },
+                ...accounts.map(acc => ({ value: String(acc.id), label: acc.name }))
+              ]}
+            />
           </div>
         </div>
 
@@ -142,9 +142,14 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
                 <span className={`tx-amount ${tx.type === 'income' ? 'text-emerald' : ''}`}>
                   {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount, hideValues)}
                 </span>
-                <Badge variant={tx.status === 'paid' ? 'success' : (tx.status === 'partial' ? 'warning' : 'danger')}>
-                  {tx.status === 'paid' ? 'Pago' : (tx.status === 'partial' ? 'Parcial' : 'Pendente')}
-                </Badge>
+                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                  {tx.is_forecast === 1 && (
+                    <Badge variant="purple">Previsão</Badge>
+                  )}
+                  <Badge variant={tx.status === 'paid' ? 'success' : (tx.status === 'partial' ? 'warning' : 'danger')}>
+                    {tx.status === 'paid' ? 'Pago' : (tx.status === 'partial' ? 'Parcial' : 'Pendente')}
+                  </Badge>
+                </div>
               </div>
               <div className="tx-actions">
                 {tx.status !== 'paid' && (

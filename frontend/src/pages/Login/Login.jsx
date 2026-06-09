@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { User, Lock, Eye, EyeOff, AlertCircle, ShieldAlert, Sparkles } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, AlertCircle, Sparkles } from 'lucide-react';
 import './Login.css';
 
 export function Login() {
@@ -9,17 +9,26 @@ export function Login() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showRegisterPrompt, setShowRegisterPrompt] = useState(false);
+  const [promptMessage, setPromptMessage] = useState('');
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e, confirmRegister = false) => {
+    if (e) e.preventDefault();
     if (!username || !password) {
       setAuthError('Preencha todos os campos para continuar.');
       return;
     }
 
     setIsSubmitting(true);
-    const success = await login(username, password);
+    const result = await login(username, password, confirmRegister);
     setIsSubmitting(false);
+
+    if (result && result.askRegister) {
+      setShowRegisterPrompt(true);
+      setPromptMessage(result.message);
+    } else if (result && result.success) {
+      setShowRegisterPrompt(false);
+    }
   };
 
   return (
@@ -35,7 +44,6 @@ export function Login() {
             <Sparkles size={32} className="text-emerald" />
           </div>
           <h1>Poupa<span className="text-emerald">Pila</span></h1>
-          <p>Insira suas credenciais para acessar o painel financeiro</p>
         </div>
 
         {/* Card de Login */}
@@ -115,13 +123,7 @@ export function Login() {
             </button>
           </form>
 
-          {/* Dica de Acesso */}
-          <div className="login-hint-box">
-            <ShieldAlert size={16} className="text-gold" />
-            <p>
-              Dica: Use o usuário <strong className="text-emerald">joao</strong> ou <strong className="text-emerald">kelvin</strong> e a senha <strong className="text-emerald">admin</strong> para testar.
-            </p>
-          </div>
+
         </div>
 
         {/* Footer */}
@@ -129,6 +131,42 @@ export function Login() {
           <p>© 2026 Poupa Pila - Finanças com elegância.</p>
         </div>
       </div>
+
+      {showRegisterPrompt && (
+        <div className="modal-overlay">
+          <div className="modal-container glass-card" style={{ maxWidth: '400px', width: '90%' }}>
+            <div className="modal-header">
+              <div className="modal-header-content">
+                <h3>Criar Nova Conta?</h3>
+                <p>O usuário informado não existe no sistema.</p>
+              </div>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: '1.5', margin: 0 }}>
+                {promptMessage}
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button 
+                type="button" 
+                className="btn-cancel" 
+                onClick={() => setShowRegisterPrompt(false)}
+                style={{ padding: '10px 20px', borderRadius: '8px', fontSize: '0.875rem' }}
+              >
+                Cancelar
+              </button>
+              <button 
+                type="button" 
+                className="btn-save" 
+                onClick={() => handleSubmit(null, true)}
+                style={{ padding: '10px 20px', borderRadius: '8px', fontSize: '0.875rem', background: 'var(--accent-emerald)', color: '#000', fontWeight: 'bold' }}
+              >
+                Sim, Criar Conta
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
