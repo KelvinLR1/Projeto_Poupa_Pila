@@ -122,8 +122,6 @@ export function Login() {
               )}
             </button>
           </form>
-
-
         </div>
 
         {/* Footer */}
