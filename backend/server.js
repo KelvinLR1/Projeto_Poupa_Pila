@@ -43,8 +43,42 @@ function authenticate(req, res, next) {
       return res.status(401).json({ error: 'Usuário não encontrado.' });
     }
 
+    // Guardar ID original e verificar vinculo em user_access
+    user.original_id = user.id;
+    user.isLinked = false;
+    user.permissions = 'admin';
+
+    const selectLink = db.prepare('SELECT owner_id, permissions FROM user_access WHERE target_username = ?');
+    const links = selectLink.all(user.username.toLowerCase());
+    if (links.length > 0) {
+      user.id = links[0].owner_id;
+      user.isLinked = true;
+      user.permissions = links[0].permissions || 'read_write';
+      
+      const ownerQuery = db.prepare('SELECT name FROM users WHERE id = ?');
+      const owners = ownerQuery.all(links[0].owner_id);
+      if (owners.length > 0) {
+        user.ownerName = owners[0].name;
+      }
+    }
+
     req.user = user;
     req.token = token;
+
+    // Se for apenas leitura e tentar modificar dados em rotas restritas
+    const isWrite = ['POST', 'PUT', 'DELETE'].includes(req.method);
+    const isRestrictedPath = req.path.startsWith('/api/accounts') ||
+                             req.path.startsWith('/api/transactions') ||
+                             req.path.startsWith('/api/loans') ||
+                             req.path.startsWith('/api/vault') ||
+                             req.path.startsWith('/api/settings');
+
+    if (user.isLinked && user.permissions === 'read_only' && isWrite && isRestrictedPath) {
+      return res.status(403).json({ 
+        error: 'Acesso apenas leitura. Você não tem permissão para realizar esta operação.' 
+      });
+    }
+
     next();
   } catch (error) {
     console.error('Erro na autenticação:', error);
@@ -55,7 +89,7 @@ function authenticate(req, res, next) {
 // ─── Rotas de Autenticação ───
 
 app.post('/api/auth/login', (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, confirmRegister } = req.body;
   
   if (!username || !password) {
     return res.status(400).json({ error: 'Usuário e senha são obrigatórios.' });
@@ -68,27 +102,34 @@ app.post('/api/auth/login', (req, res) => {
     const users = selectUser.all(lowerUser);
     let user = users[0];
 
-    // Se o usuário não existir, faz o Auto-Cadastro (Frictionless Onboarding)
+    // Se o usuário não existir
     if (!user) {
-      // Determina o nome de exibição de forma amigável
-      let name = '';
-      if (lowerUser === 'joao' || lowerUser === 'joão') {
-        name = 'João';
-      } else if (lowerUser === 'kelvin') {
-        name = 'Kelvin';
-      } else if (lowerUser === 'admin') {
-        name = 'Administrador';
-      } else {
-        name = username.charAt(0).toUpperCase() + username.slice(1);
+      // Verificar se está vinculado a alguma conta
+      const selectLink = db.prepare('SELECT owner_id FROM user_access WHERE target_username = ?');
+      const links = selectLink.all(lowerUser);
+      const isLinked = links.length > 0;
+
+      // Se não está vinculado e não confirmou cadastro, retorna status para perguntar no front
+      if (!isLinked && !confirmRegister) {
+        return res.json({ 
+          status: 'ask_register', 
+          message: 'Usuário não encontrado no sistema. Deseja criar uma conta?' 
+        });
       }
 
+      // Se está vinculado OU se confirmou o cadastro no prompt: cria o usuário
+      let name = username.charAt(0).toUpperCase() + username.slice(1);
       const hash = cryptoUtils.hashPassword(password);
       const insertUser = db.prepare('INSERT INTO users (username, password_hash, name) VALUES (?, ?, ?)');
       const result = insertUser.run(lowerUser, hash, name);
       
       const newUserId = result.lastInsertRowid;
       
-      // Novo usuário registrado com sucesso, começa do zero
+      // Se NÃO for conta vinculada, gera as contas padrões com saldo zerado
+      if (!isLinked) {
+        const { seedDefaultData } = require('./db');
+        seedDefaultData(newUserId, true);
+      }
 
       // Busca o usuário recém-criado
       const selectNewUser = db.prepare('SELECT * FROM users WHERE id = ?');
@@ -108,12 +149,31 @@ app.post('/api/auth/login', (req, res) => {
     const insertSession = db.prepare('INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)');
     insertSession.run(token, user.id, expiresAt);
 
+    // Se o usuário estiver vinculado, envia informações de vinculo
+    const selectLink = db.prepare('SELECT owner_id, permissions FROM user_access WHERE target_username = ?');
+    const links = selectLink.all(user.username.toLowerCase());
+    let isLinked = false;
+    let ownerName = null;
+    let permissions = 'admin';
+    if (links.length > 0) {
+      isLinked = true;
+      permissions = links[0].permissions || 'read_write';
+      const ownerQuery = db.prepare('SELECT name FROM users WHERE id = ?');
+      const owners = ownerQuery.all(links[0].owner_id);
+      if (owners.length > 0) {
+        ownerName = owners[0].name;
+      }
+    }
+
     res.json({
       token,
       user: {
         id: user.id,
         username: user.username,
-        name: user.name
+        name: user.name,
+        isLinked,
+        ownerName,
+        permissions
       }
     });
   } catch (error) {
@@ -135,6 +195,84 @@ app.post('/api/auth/logout', authenticate, (req, res) => {
 
 app.get('/api/auth/me', authenticate, (req, res) => {
   res.json({ user: req.user });
+});
+
+// ─── Rotas de Gerenciamento de Acessos Compartilhados ───
+
+app.get('/api/settings/access', authenticate, (req, res) => {
+  try {
+    const ownerId = req.user.original_id || req.user.id;
+    const accessList = db.prepare('SELECT id, target_username, permissions FROM user_access WHERE owner_id = ?').all(ownerId);
+    res.json(accessList);
+  } catch (error) {
+    console.error('Erro ao buscar acessos:', error);
+    res.status(500).json({ error: 'Erro ao buscar acessos compartilhados.' });
+  }
+});
+
+app.post('/api/settings/access', authenticate, (req, res) => {
+  const { username, permissions, password } = req.body;
+  if (!username) {
+    return res.status(400).json({ error: 'Nome de usuário é obrigatório.' });
+  }
+  const lowerUser = username.toLowerCase().trim();
+  const ownerId = req.user.original_id || req.user.id;
+  const finalPerms = ['read_write', 'read_only'].includes(permissions) ? permissions : 'read_write';
+
+  try {
+    // Impede que o dono se adicione
+    const ownerQuery = db.prepare('SELECT username FROM users WHERE id = ?');
+    const owner = ownerQuery.all(ownerId)[0];
+    if (owner && owner.username.toLowerCase() === lowerUser) {
+      return res.status(400).json({ error: 'Não é possível dar acesso ao seu próprio usuário.' });
+    }
+
+    // Verifica se já tem vínculo
+    const checkQuery = db.prepare('SELECT id FROM user_access WHERE owner_id = ? AND target_username = ?');
+    const exists = checkQuery.all(ownerId, lowerUser);
+    if (exists.length > 0) {
+      return res.status(400).json({ error: 'Este usuário já possui acesso a esta conta.' });
+    }
+
+    // Verifica se o usuário alvo já existe
+    const findUser = db.prepare('SELECT id FROM users WHERE username = ?');
+    const targetUser = findUser.all(lowerUser)[0];
+
+    if (!targetUser) {
+      // Usuário não existe: precisa de senha para criar a conta
+      if (!password || password.trim().length < 4) {
+        return res.status(400).json({
+          error: 'Este usuário ainda não tem conta. Defina uma senha (mín. 4 caracteres) para criá-la.'
+        });
+      }
+      const hash = cryptoUtils.hashPassword(password.trim());
+      const name = lowerUser.charAt(0).toUpperCase() + lowerUser.slice(1);
+      const insertUser = db.prepare('INSERT INTO users (username, password_hash, name) VALUES (?, ?, ?)');
+      insertUser.run(lowerUser, hash, name);
+      // Conta de convidado: sem dados padrão
+    }
+
+    // Cria o vínculo de acesso
+    const insertAccess = db.prepare('INSERT INTO user_access (owner_id, target_username, permissions) VALUES (?, ?, ?)');
+    insertAccess.run(ownerId, lowerUser, finalPerms);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Erro ao adicionar acesso:', error);
+    res.status(500).json({ error: 'Erro ao adicionar acesso.' });
+  }
+});
+
+app.delete('/api/settings/access/:id', authenticate, (req, res) => {
+  const { id } = req.params;
+  const ownerId = req.user.original_id || req.user.id;
+  try {
+    const deleteAccess = db.prepare('DELETE FROM user_access WHERE id = ? AND owner_id = ?');
+    deleteAccess.run(id, ownerId);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Erro ao remover acesso:', error);
+    res.status(500).json({ error: 'Erro ao remover acesso.' });
+  }
 });
 
 // ─── Rotas de Finanças ───
@@ -230,7 +368,7 @@ app.put('/api/finance/accounts/:id/toggle', authenticate, (req, res) => {
 });
 
 app.post('/api/finance/transactions', authenticate, (req, res) => {
-  const { id, accountId, type, amount, category, description, date, status } = req.body;
+  const { id, accountId, type, amount, category, description, date, status, is_forecast } = req.body;
   if (!id || !accountId || !type || !amount || !category || !date || !status) {
     return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
   }
@@ -240,10 +378,10 @@ app.post('/api/finance/transactions', authenticate, (req, res) => {
     db.exec('BEGIN TRANSACTION');
 
     const insertTx = db.prepare(`
-      INSERT INTO transactions (id, user_id, accountId, type, amount, category, description, date, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO transactions (id, user_id, accountId, type, amount, category, description, date, status, is_forecast)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    insertTx.run(id, req.user.id, accountId, type, parseFloat(amount), category, description || '', date, status);
+    insertTx.run(id, req.user.id, accountId, type, parseFloat(amount), category, description || '', date, status, is_forecast ? 1 : 0);
 
     let settlements = [];
     if (status === 'paid') {
@@ -272,7 +410,7 @@ app.post('/api/finance/transactions', authenticate, (req, res) => {
 
 app.post('/api/finance/transactions/:id/pay', authenticate, (req, res) => {
   const { id } = req.params;
-  const { paidAmount } = req.body;
+  const { paidAmount, actualAmount } = req.body;
 
   try {
     db.exec('BEGIN TRANSACTION');
@@ -286,6 +424,15 @@ app.post('/api/finance/transactions/:id/pay', authenticate, (req, res) => {
     if (tx.status === 'paid') {
       db.exec('ROLLBACK');
       return res.status(400).json({ error: 'Transação já está paga.' });
+    }
+
+    // Se for uma transação de previsão e um valor real/final for fornecido, atualiza o valor original
+    if (actualAmount !== undefined && actualAmount !== null) {
+      const newAmount = parseFloat(actualAmount);
+      const updateTxAmount = db.prepare('UPDATE transactions SET amount = ?, is_forecast = 0 WHERE id = ?');
+      updateTxAmount.run(newAmount, id);
+      tx.amount = newAmount;
+      tx.is_forecast = 0;
     }
 
     const settlements = db.prepare('SELECT amount FROM settlements WHERE transaction_id = ?').all(id);

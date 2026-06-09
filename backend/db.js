@@ -51,10 +51,17 @@ db.exec(`
     description TEXT,
     date TEXT NOT NULL,
     status TEXT NOT NULL,
+    is_forecast INTEGER DEFAULT 0,
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
     FOREIGN KEY (accountId) REFERENCES accounts (id) ON DELETE CASCADE
   );
 `);
+
+try {
+  db.exec('ALTER TABLE transactions ADD COLUMN is_forecast INTEGER DEFAULT 0');
+} catch (e) {
+  // Column already exists, safe to ignore
+}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS settlements (
@@ -131,15 +138,35 @@ db.exec(`
   );
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS user_access (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    owner_id INTEGER NOT NULL,
+    target_username TEXT NOT NULL,
+    permissions TEXT NOT NULL DEFAULT 'read_write',
+    FOREIGN KEY (owner_id) REFERENCES users (id) ON DELETE CASCADE
+  );
+`);
+
+try {
+  db.exec("ALTER TABLE user_access ADD COLUMN permissions TEXT DEFAULT 'read_write'");
+} catch (e) {
+  // Column already exists, safe to ignore
+}
+
 /**
  * Popula a conta de um novo usuário com os dados padrão originais do mockup.
  */
-function seedDefaultData(userId) {
+function seedDefaultData(userId, isClean = false) {
   // ─── contas ───
   const insertAccount = db.prepare(`
     INSERT INTO accounts (id, user_id, name, type, balance, color, active)
     VALUES (?, ?, ?, ?, ?, ?, 1)
   `);
+  if (isClean) {
+    insertAccount.run('1', userId, 'Carteira', 'wallet', 0.0, '#10b981');
+    return;
+  }
   insertAccount.run('1', userId, 'Nubank', 'checking', 4500.50, '#8A05BE');
   insertAccount.run('2', userId, 'Itaú', 'checking', 1200.00, '#EC7000');
   insertAccount.run('3', userId, 'Carteira', 'wallet', 150.00, '#10b981');
