@@ -1,0 +1,240 @@
+/* TransactionDetailsModal — estilos específicos */
+
+.tx-details-container {
+  max-width: 480px;
+}
+
+/* Header especial com ícone de tipo */
+.tx-header-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+}
+
+.tx-type-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.icon-income {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--accent-emerald);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.icon-expense {
+  background: rgba(244, 63, 94, 0.12);
+  color: var(--accent-coral);
+  border: 1px solid rgba(244, 63, 94, 0.25);
+}
+
+/* Meta info no header */
+.tx-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.tx-date-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* Resumo financeiro */
+.tx-financial-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+}
+
+.tx-summary-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.tx-summary-amount {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+}
+
+/* Barra de progresso */
+.tx-progress-block {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.tx-progress-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.tx-progress-pct {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.tx-progress-track {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.tx-progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fill-emerald {
+  background: linear-gradient(90deg, #059669, var(--accent-emerald));
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+}
+
+.fill-coral {
+  background: linear-gradient(90deg, #be123c, var(--accent-coral));
+  box-shadow: 0 0 8px rgba(244, 63, 94, 0.3);
+}
+
+.tx-progress-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.tx-remaining {
+  color: var(--accent-gold);
+  font-weight: 600;
+}
+
+/* Timeline */
+.tx-timeline-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tx-timeline-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.tx-timeline-empty {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 12px 0;
+}
+
+.tx-timeline {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding-left: 20px;
+  gap: 10px;
+}
+
+.tx-timeline::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 2px;
+}
+
+.tx-timeline-item {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.tx-timeline-dot {
+  position: absolute;
+  left: -20px;
+  top: 8px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--surface-light);
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 0 3px #0f0f12;
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.tx-timeline-dot.dot-active {
+  background: var(--accent-emerald);
+  border-color: var(--accent-emerald);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5), 0 0 0 3px #0f0f12;
+}
+
+.tx-timeline-content {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.tx-timeline-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 3px;
+}
+
+.tx-timeline-row strong {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.tx-timeline-amt {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--accent-emerald);
+}
+
+.tx-timeline-date {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
