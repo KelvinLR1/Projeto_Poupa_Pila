@@ -1,12 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useFinance } from '../../context/FinanceContext';
 import { Button } from './Button';
-import { X, ArrowUpRight, ArrowDownRight, HelpCircle } from 'lucide-react';
+import { X, ArrowUpRight, ArrowDownRight, HelpCircle, AlertCircle } from 'lucide-react';
 import { CustomSelect } from './CustomSelect';
 import { CustomDatePicker } from './CustomDatePicker';
 import { maskCurrencyBRL, parseCurrencyBRL } from '../../utils/formatters';
 import './TransactionFormDrawer.css';
+
+function addMonthsHelper(dateStr, months) {
+  if (!dateStr) return '';
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const d = new Date(year, month - 1 + months, 1);
+  const maxDays = new Date(year, month + months, 0).getDate();
+  d.setDate(Math.min(day, maxDays));
+  
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
 
 export function TransactionFormDrawer({ onClose }) {
   const { addTransaction, accounts } = useFinance();
@@ -19,6 +32,10 @@ export function TransactionFormDrawer({ onClose }) {
   const [status, setStatus] = useState('pending');
   const [isForecast, setIsForecast] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [isInstallment, setIsInstallment] = useState(false);
+  const [installmentsCount, setInstallmentsCount] = useState('2');
+  const [installmentValueMode, setInstallmentValueMode] = useState('total');
+  const [installments, setInstallments] = useState([]);
 
   const handleClose = () => {
     setIsClosing(true);
@@ -27,10 +44,114 @@ export function TransactionFormDrawer({ onClose }) {
     }, 280);
   };
 
+  const recalculateInstallmentsSync = (totalAmount, countStr, valueMode, baseDate) => {
+    const count = parseInt(countStr, 10);
+    if (isNaN(count) || count < 2 || totalAmount <= 0) {
+      setInstallments([]);
+      return;
+    }
+
+    const isTotalMode = valueMode === 'total';
+    const baseInstallmentAmount = isTotalMode 
+      ? Math.round((totalAmount / count) * 100) / 100
+      : totalAmount;
+
+    const newInstallments = [];
+    for (let i = 1; i <= count; i++) {
+      let currentAmount = baseInstallmentAmount;
+      if (isTotalMode && i === count) {
+        currentAmount = Math.round((totalAmount - (baseInstallmentAmount * (count - 1))) * 100) / 100;
+      }
+
+      const instDate = addMonthsHelper(baseDate, i - 1);
+
+      newInstallments.push({
+        index: i,
+        date: instDate,
+        amount: currentAmount,
+        maskedAmount: maskCurrencyBRL(currentAmount.toFixed(2))
+      });
+    }
+
+    setInstallments(newInstallments);
+  };
+
+  const handleAmountChange = (val) => {
+    const masked = maskCurrencyBRL(val);
+    setAmount(masked);
+    if (isInstallment) {
+      const totalAmount = parseCurrencyBRL(masked);
+      recalculateInstallmentsSync(totalAmount, installmentsCount, installmentValueMode, date);
+    }
+  };
+
+  const handleIsInstallmentChange = (checked) => {
+    setIsInstallment(checked);
+    if (checked) {
+      const totalAmount = parseCurrencyBRL(amount);
+      recalculateInstallmentsSync(totalAmount, installmentsCount, installmentValueMode, date);
+    } else {
+      setInstallments([]);
+    }
+  };
+
+  const handleInstallmentsCountChange = (val) => {
+    setInstallmentsCount(val);
+    if (isInstallment) {
+      const totalAmount = parseCurrencyBRL(amount);
+      recalculateInstallmentsSync(totalAmount, val, installmentValueMode, date);
+    }
+  };
+
+  const handleValueModeChange = (val) => {
+    setInstallmentValueMode(val);
+    if (isInstallment) {
+      const totalAmount = parseCurrencyBRL(amount);
+      recalculateInstallmentsSync(totalAmount, installmentsCount, val, date);
+    }
+  };
+
+  const handleDateChange = (val) => {
+    setDate(val);
+    if (isInstallment) {
+      const totalAmount = parseCurrencyBRL(amount);
+      recalculateInstallmentsSync(totalAmount, installmentsCount, installmentValueMode, val);
+    }
+  };
+
+  const handleAdjustTotalToSum = () => {
+    const sum = installments.reduce((acc, inst) => acc + inst.amount, 0);
+    setAmount(maskCurrencyBRL(sum.toFixed(2)));
+  };
+
+  const handleRedistribute = () => {
+    const totalAmount = parseCurrencyBRL(amount);
+    recalculateInstallmentsSync(totalAmount, installmentsCount, installmentValueMode, date);
+  };
+
+  const handleInstallmentChange = (idx, field, value) => {
+    const newInst = [...installments];
+    if (field === 'amount') {
+      const masked = maskCurrencyBRL(value);
+      newInst[idx].maskedAmount = masked;
+      newInst[idx].amount = parseCurrencyBRL(masked);
+    } else if (field === 'date') {
+      newInst[idx].date = value;
+    }
+    setInstallments(newInst);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     const parsedAmount = parseCurrencyBRL(amount);
     if (parsedAmount <= 0 || !description || !category || !accountId) return;
+
+    const hasEmptyInst = isInstallment && installments.some(inst => inst.amount <= 0);
+    const sum = installments.reduce((acc, inst) => acc + inst.amount, 0);
+    const hasDiff = isInstallment && installmentValueMode === 'total' && Math.abs(sum - parsedAmount) > 0.01;
+    if (hasEmptyInst || hasDiff) return;
+
+    const actualIsInstallment = isInstallment && installments && installments.length >= 2;
 
     addTransaction({
       type,
@@ -40,11 +161,19 @@ export function TransactionFormDrawer({ onClose }) {
       date,
       accountId,
       status: isForecast ? 'pending' : status,
-      is_forecast: isForecast ? 1 : 0
+      is_forecast: isForecast ? 1 : 0,
+      isInstallment: actualIsInstallment,
+      installments: actualIsInstallment ? installments.map(i => ({ index: i.index, date: i.date, amount: i.amount })) : null
     });
 
     handleClose();
   };
+
+  const totalAmountVal = parseCurrencyBRL(amount);
+  const sumAmountVal = installments.reduce((acc, inst) => acc + inst.amount, 0);
+  const hasInstallmentDifference = isInstallment && installmentValueMode === 'total' && Math.abs(sumAmountVal - totalAmountVal) > 0.01;
+  const hasEmptyInstallment = isInstallment && installments.some(inst => inst.amount <= 0);
+  const isSubmitDisabled = hasInstallmentDifference || hasEmptyInstallment;
 
   return createPortal(
     <div className={`drawer-overlay ${isClosing ? 'closing' : ''}`} onClick={handleClose}>
@@ -61,7 +190,7 @@ export function TransactionFormDrawer({ onClose }) {
 
         <form onSubmit={handleSubmit} className="drawer-form-wrapper">
           <div className="drawer-body">
-            {/* Seção 1: Tipo e Valor */}
+            {/* Seção 1: Tipo, Valor e Parcelamento */}
             <div className="drawer-section">
               <h4 className="section-title">Valor e Tipo</h4>
               <div className="form-row">
@@ -94,10 +223,123 @@ export function TransactionFormDrawer({ onClose }) {
                       required
                       className="amount-input"
                       value={amount}
-                      onChange={(e) => setAmount(maskCurrencyBRL(e.target.value))}
+                      onChange={(e) => handleAmountChange(e.target.value)}
                       placeholder="0,00"
                       autoFocus
                     />
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-group checkbox-group mt-16">
+                <label className="checkbox-label">
+                  <input 
+                    type="checkbox" 
+                    checked={isInstallment} 
+                    onChange={(e) => handleIsInstallmentChange(e.target.checked)}
+                  />
+                  <div className="checkbox-custom"></div>
+                  <div className="checkbox-text">
+                    <strong>Lançamento Parcelado</strong>
+                  </div>
+                </label>
+              </div>
+
+              <div className={`installment-container ${isInstallment ? 'open' : ''}`}>
+                <div className="installment-content">
+                  <div className="installment-fields">
+                    <div className="form-row">
+                      <div className="form-group flex-1">
+                        <label>Número de Parcelas</label>
+                        <input
+                          type="number"
+                          min="2"
+                          max="72"
+                          required={isInstallment}
+                          className="form-input"
+                          value={installmentsCount}
+                          onChange={(e) => handleInstallmentsCountChange(e.target.value)}
+                        />
+                      </div>
+                      <div className="form-group flex-1">
+                        <label>Divisão do Valor</label>
+                        <CustomSelect
+                          value={installmentValueMode}
+                          onChange={(e) => handleValueModeChange(e.target.value)}
+                          options={[
+                            { value: 'total', label: 'Dividir o valor total' },
+                            { value: 'per_installment', label: 'Valor fixo por parcela' }
+                          ]}
+                        />
+                      </div>
+                    </div>
+
+                    <div className={`installments-preview-wrapper ${installments.length > 0 ? 'expanded' : ''}`}>
+                      <div className="installments-preview-list">
+                        <label className="preview-list-title">Ajuste das Parcelas</label>
+                        <div className="installments-preview-header">
+                          <span>Parcela</span>
+                          <span>Vencimento</span>
+                          <span>Valor (R$)</span>
+                        </div>
+                        {installments.map((inst, idx) => (
+                          <div key={idx} className="installment-preview-row">
+                            <span className="installment-num">#{inst.index}</span>
+                            <div className="installment-date-col">
+                              <CustomDatePicker
+                                value={inst.date}
+                                onChange={(e) => handleInstallmentChange(idx, 'date', e.target.value)}
+                              />
+                            </div>
+                            <div className="installment-amount-col">
+                              <div className={`amount-input-wrapper sm ${inst.amount <= 0 ? 'has-error' : ''}`}>
+                                <span className="currency-prefix">R$</span>
+                                <input
+                                  type="text"
+                                  className="amount-input sm-input"
+                                  value={inst.maskedAmount}
+                                  onChange={(e) => handleInstallmentChange(idx, 'amount', e.target.value)}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {hasEmptyInstallment && (
+                      <div className="installment-warning mt-12">
+                        <div className="warning-message-row">
+                          <AlertCircle size={16} />
+                          <span>Por favor, preencha o valor de todas as parcelas (deve ser maior que R$ 0,00).</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {!hasEmptyInstallment && hasInstallmentDifference && (
+                      <div className="installment-warning mt-12">
+                        <div className="warning-message-row">
+                          <AlertCircle size={16} />
+                          <span>
+                            A soma das parcelas (<strong>R$ {maskCurrencyBRL(sumAmountVal.toFixed(2))}</strong>) difere do valor total (<strong>R$ {maskCurrencyBRL(totalAmountVal.toFixed(2))}</strong>).
+                          </span>
+                        </div>
+                        <div className="warning-actions">
+                          <button type="button" onClick={handleAdjustTotalToSum} className="warning-action-btn">
+                            Ajustar Valor Total
+                          </button>
+                          <button type="button" onClick={handleRedistribute} className="warning-action-btn">
+                            Refazer Divisão
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {status === 'paid' && !isForecast && (
+                      <p className="installment-notice mt-12">
+                        * A primeira parcela será criada como Paga (efetivada) e as {installments.length - 1 || 'demais'} parcelas seguintes como Pendentes.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -136,7 +378,7 @@ export function TransactionFormDrawer({ onClose }) {
                   <label>Data</label>
                   <CustomDatePicker
                     value={date}
-                    onChange={(e) => setDate(e.target.value)}
+                    onChange={(e) => handleDateChange(e.target.value)}
                   />
                 </div>
                 <div className="form-group flex-1">
@@ -245,7 +487,7 @@ export function TransactionFormDrawer({ onClose }) {
 
           <div className="drawer-footer">
             <Button variant="secondary" onClick={handleClose} type="button">Cancelar</Button>
-            <Button variant="primary" type="submit">Salvar Transação</Button>
+            <Button variant="primary" type="submit" disabled={isSubmitDisabled}>Salvar Transação</Button>
           </div>
         </form>
       </div>

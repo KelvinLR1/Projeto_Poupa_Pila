@@ -12,7 +12,7 @@ import './Transactions.css';
 import { CustomSelect } from '../../components/ui/CustomSelect';
 
 export function Transactions({ filterAccountId, setFilterAccountId }) {
-  const { transactions, accounts, hideValues, markTransactionAsPaid } = useFinance();
+  const { transactions, accounts, loans, hideValues, markTransactionAsPaid } = useFinance();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all'); // 'all', 'payable', 'receivable'
   const [selectedTxForPayment, setSelectedTxForPayment] = useState(null);
@@ -51,8 +51,8 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
     };
   }, [activeTab]);
 
-  const handleConfirmPayment = ({ transaction, paidAmount, actualAmount }) => {
-    markTransactionAsPaid(transaction.id, paidAmount, actualAmount);
+  const handleConfirmPayment = ({ transaction, paidAmount, actualAmount, asLoan, loanId, loanCounterpart, loanDueDate, loanTitle }) => {
+    markTransactionAsPaid(transaction.id, paidAmount, actualAmount, asLoan, loanId, loanCounterpart, loanDueDate, loanTitle);
     setSelectedTxForPayment(null);
   };
 
@@ -221,6 +221,7 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
           transaction={selectedTxForPayment}
           onConfirm={handleConfirmPayment}
           onCancel={() => setSelectedTxForPayment(null)}
+          loans={loans}
         />
       )}
 

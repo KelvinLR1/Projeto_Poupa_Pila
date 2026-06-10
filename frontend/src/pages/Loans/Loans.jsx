@@ -48,7 +48,10 @@ export function Loans() {
             </div>
             <div>
               <h4>{loan.counterpart}</h4>
-              <p>{loan.type === 'lent' ? 'Me deve' : 'Eu devo'}</p>
+              <p>
+                {loan.title ? <strong>{loan.title}</strong> : (loan.type === 'lent' ? 'Me deve' : 'Eu devo')}
+                {loan.title && ` • ${loan.type === 'lent' ? 'Me deve' : 'Eu devo'}`}
+              </p>
             </div>
           </div>
           <Badge variant={loan.status === 'active' ? 'warning' : 'success'}>

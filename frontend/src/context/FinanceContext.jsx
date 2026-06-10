@@ -122,7 +122,7 @@ export function FinanceProvider({ children }) {
     }
   };
 
-  const markTransactionAsPaid = async (transactionId, paidAmount = null, actualAmount = null) => {
+  const markTransactionAsPaid = async (transactionId, paidAmount = null, actualAmount = null, asLoan = false, loanId = null, loanCounterpart = null, loanDueDate = null, loanTitle = null) => {
     try {
       const res = await fetch(`/api/finance/transactions/${transactionId}/pay`, {
         method: 'POST',
@@ -130,7 +130,7 @@ export function FinanceProvider({ children }) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ paidAmount, actualAmount })
+        body: JSON.stringify({ paidAmount, actualAmount, asLoan, loanId, loanCounterpart, loanDueDate, loanTitle })
       });
       if (res.ok) {
         await fetchFinanceData();

@@ -3,9 +3,11 @@ import { createPortal } from 'react-dom';
 import { formatCurrency, maskCurrencyBRL, parseCurrencyBRL } from '../../utils/formatters';
 import { Button } from '../ui/Button';
 import { Check, Split, X } from 'lucide-react';
+import { CustomSelect } from './CustomSelect';
+import { CustomDatePicker } from './CustomDatePicker';
 import './PaymentModal.css';
 
-export function PaymentModal({ transaction, onConfirm, onCancel }) {
+export function PaymentModal({ transaction, onConfirm, onCancel, loans = [] }) {
   const settlements = transaction.settlements || [];
   const alreadyPaid = settlements.reduce((acc, s) => acc + s.amount, 0);
   const remaining = transaction.amount - alreadyPaid;
@@ -15,15 +17,28 @@ export function PaymentModal({ transaction, onConfirm, onCancel }) {
   const [actualAmount, setActualAmount] = useState(maskCurrencyBRL(transaction.amount));
   const [amount, setAmount] = useState(maskCurrencyBRL(remaining));
 
+  const [asLoan, setAsLoan] = useState(false);
+  const [loanMode, setLoanMode] = useState(loans.length > 0 ? 'existing' : 'new');
+  const [selectedLoanId, setSelectedLoanId] = useState('');
+  const [loanCounterpart, setLoanCounterpart] = useState('');
+  const [loanDueDate, setLoanDueDate] = useState(new Date().toISOString().split('T')[0]);
+  const [loanTitle, setLoanTitle] = useState('');
+
   const parsedActualAmount = parseCurrencyBRL(actualAmount);
   const parsedAmount = parseCurrencyBRL(amount);
 
   const currentRemaining = isForecast ? Math.max(0, parsedActualAmount - alreadyPaid) : remaining;
 
   const isPartial = parsedAmount < currentRemaining && parsedAmount > 0;
+  
+  const isLoanValid = !asLoan || (
+    (loanMode === 'existing' && selectedLoanId !== '') ||
+    (loanMode === 'new' && loanCounterpart.trim() !== '')
+  );
+
   const isValid = isForecast
-    ? (parsedActualAmount > 0 && parsedAmount > 0 && parsedAmount <= currentRemaining)
-    : (parsedAmount > 0 && parsedAmount <= remaining);
+    ? (parsedActualAmount > 0 && parsedAmount > 0 && parsedAmount <= currentRemaining && isLoanValid)
+    : (parsedAmount > 0 && parsedAmount <= remaining && isLoanValid);
 
   const handleActualAmountChange = (val) => {
     const maskedVal = maskCurrencyBRL(val);
@@ -35,7 +50,16 @@ export function PaymentModal({ transaction, onConfirm, onCancel }) {
 
   const handleConfirm = () => {
     if (!isValid) return;
-    onConfirm({ transaction, paidAmount: parsedAmount, actualAmount: isForecast ? parsedActualAmount : null });
+    onConfirm({
+      transaction,
+      paidAmount: parsedAmount,
+      actualAmount: isForecast ? parsedActualAmount : null,
+      asLoan,
+      loanId: asLoan && loanMode === 'existing' ? selectedLoanId : null,
+      loanCounterpart: asLoan && loanMode === 'new' ? loanCounterpart : null,
+      loanDueDate: asLoan && loanMode === 'new' ? loanDueDate : null,
+      loanTitle: asLoan && loanMode === 'new' ? loanTitle : null
+    });
   };
 
   return createPortal(
@@ -112,6 +136,104 @@ export function PaymentModal({ transaction, onConfirm, onCancel }) {
               />
             </div>
           </div>
+
+          {/* Opção de Quitar via Empréstimo */}
+          <div className="loan-checkbox-container">
+            <label className="checkbox-label">
+              <input 
+                type="checkbox" 
+                checked={asLoan} 
+                onChange={(e) => setAsLoan(e.target.checked)} 
+              />
+              <div className="checkbox-custom"></div>
+              <div className="checkbox-text">
+                <strong>Quitar via Empréstimo</strong>
+                <span>O valor será adicionado a um empréstimo em vez de debitar/creditar sua conta.</span>
+              </div>
+            </label>
+          </div>
+
+          {asLoan && (
+            <div className="loan-fields-container animate-fade-in">
+              <div className="loan-mode-selector">
+                <label className={`loan-mode-option ${loanMode === 'existing' ? 'active' : ''} ${loans.length === 0 ? 'disabled' : ''}`}>
+                  <input
+                    type="radio"
+                    name="loanMode"
+                    value="existing"
+                    disabled={loans.length === 0}
+                    checked={loanMode === 'existing'}
+                    onChange={() => setLoanMode('existing')}
+                  />
+                  <span className="radio-text">Vincular a Empréstimo Existente</span>
+                </label>
+                <label className={`loan-mode-option ${loanMode === 'new' ? 'active' : ''}`}>
+                  <input
+                    type="radio"
+                    name="loanMode"
+                    value="new"
+                    checked={loanMode === 'new'}
+                    onChange={() => setLoanMode('new')}
+                  />
+                  <span className="radio-text">Criar Novo Empréstimo</span>
+                </label>
+              </div>
+
+              {loanMode === 'existing' && loans.length > 0 && (
+                <div className="amount-input-group mt-12">
+                  <label>Selecione o Empréstimo</label>
+                  <CustomSelect
+                    value={selectedLoanId}
+                    onChange={(e) => setSelectedLoanId(e.target.value)}
+                    options={[
+                      { value: '', label: 'Selecione um empréstimo...' },
+                      ...loans.map(l => {
+                        const balance = l.totalAmount - l.paidAmount;
+                        const labelType = l.type === 'lent' ? 'A Receber' : 'A Pagar';
+                        const displayBalance = balance > 0 ? `(Saldo: R$ ${balance.toFixed(2)} ${labelType})` : '(Quitado)';
+                        return {
+                          value: l.id,
+                          label: `${l.counterpart} ${displayBalance}`
+                        };
+                      })
+                    ]}
+                  />
+                </div>
+              )}
+
+              {loanMode === 'new' && (
+                <div className="new-loan-fields mt-12">
+                  <div className="amount-input-group">
+                    <label>Nome do Contato / Pessoa</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={loanCounterpart}
+                      onChange={(e) => setLoanCounterpart(e.target.value)}
+                      placeholder="Ex: Carlos Silva"
+                    />
+                  </div>
+                  <div className="amount-input-group mt-12">
+                    <label>Identificação / Título (Opcional)</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={loanTitle}
+                      onChange={(e) => setLoanTitle(e.target.value)}
+                      placeholder="Ex: Empréstimo para reforma, Viagem, etc."
+                    />
+                  </div>
+                  <div className="amount-input-group mt-12">
+                    <label>Vencimento do Empréstimo (Opcional)</label>
+                    <CustomDatePicker
+                      value={loanDueDate}
+                      onChange={(e) => setLoanDueDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Feedback visual */}
           {isPartial && (

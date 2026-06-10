@@ -367,8 +367,20 @@ app.put('/api/finance/accounts/:id/toggle', authenticate, (req, res) => {
   }
 });
 
+function addMonths(dateStr, months) {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const d = new Date(year, month - 1 + months, 1);
+  const maxDays = new Date(year, month + months, 0).getDate();
+  d.setDate(Math.min(day, maxDays));
+  
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 app.post('/api/finance/transactions', authenticate, (req, res) => {
-  const { id, accountId, type, amount, category, description, date, status, is_forecast } = req.body;
+  const { id, accountId, type, amount, category, description, date, status, is_forecast, isInstallment, installments } = req.body;
   if (!id || !accountId || !type || !amount || !category || !date || !status) {
     return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
   }
@@ -381,22 +393,69 @@ app.post('/api/finance/transactions', authenticate, (req, res) => {
       INSERT INTO transactions (id, user_id, accountId, type, amount, category, description, date, status, is_forecast)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    insertTx.run(id, req.user.id, accountId, type, parseFloat(amount), category, description || '', date, status, is_forecast ? 1 : 0);
 
     let settlements = [];
-    if (status === 'paid') {
-      const settlementId = Math.random().toString(36).substr(2, 9);
-      const insertSettlement = db.prepare(`
-        INSERT INTO settlements (id, transaction_id, date, amount, accountId)
-        VALUES (?, ?, ?, ?, ?)
-      `);
-      insertSettlement.run(settlementId, id, date, parseFloat(amount), accountId);
-      settlements.push({ id: settlementId, date, amount: parseFloat(amount), accountId });
 
-      // Atualiza o saldo da conta
-      const amountChange = type === 'income' ? parseFloat(amount) : -parseFloat(amount);
-      const updateBalance = db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ?');
-      updateBalance.run(amountChange, accountId, req.user.id);
+    if (isInstallment) {
+      if (!Array.isArray(installments) || installments.length < 2) {
+        db.exec('ROLLBACK');
+        return res.status(400).json({ error: 'Lista de parcelas inválida.' });
+      }
+
+      for (let i = 0; i < installments.length; i++) {
+        const inst = installments[i];
+        const installmentId = inst.index === 1 ? id : Math.random().toString(36).substr(2, 9);
+        const installmentDate = inst.date;
+        const installmentAmount = parseFloat(inst.amount);
+        const installmentDesc = description ? `${description} (${inst.index}/${installments.length})` : `Parcela (${inst.index}/${installments.length})`;
+        
+        const installmentStatus = (inst.index === 1 && status === 'paid' && !is_forecast) ? 'paid' : 'pending';
+
+        insertTx.run(
+          installmentId,
+          req.user.id,
+          accountId,
+          type,
+          installmentAmount,
+          category,
+          installmentDesc,
+          installmentDate,
+          installmentStatus,
+          is_forecast ? 1 : 0
+        );
+
+        if (installmentStatus === 'paid') {
+          const settlementId = Math.random().toString(36).substr(2, 9);
+          const insertSettlement = db.prepare(`
+            INSERT INTO settlements (id, transaction_id, date, amount, accountId)
+            VALUES (?, ?, ?, ?, ?)
+          `);
+          insertSettlement.run(settlementId, installmentId, installmentDate, installmentAmount, accountId);
+          settlements.push({ id: settlementId, date: installmentDate, amount: installmentAmount, accountId });
+
+          // Atualiza o saldo da conta
+          const amountChange = type === 'income' ? installmentAmount : -installmentAmount;
+          const updateBalance = db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ?');
+          updateBalance.run(amountChange, accountId, req.user.id);
+        }
+      }
+    } else {
+      insertTx.run(id, req.user.id, accountId, type, parseFloat(amount), category, description || '', date, status, is_forecast ? 1 : 0);
+
+      if (status === 'paid') {
+        const settlementId = Math.random().toString(36).substr(2, 9);
+        const insertSettlement = db.prepare(`
+          INSERT INTO settlements (id, transaction_id, date, amount, accountId)
+          VALUES (?, ?, ?, ?, ?)
+        `);
+        insertSettlement.run(settlementId, id, date, parseFloat(amount), accountId);
+        settlements.push({ id: settlementId, date, amount: parseFloat(amount), accountId });
+
+        // Atualiza o saldo da conta
+        const amountChange = type === 'income' ? parseFloat(amount) : -parseFloat(amount);
+        const updateBalance = db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ?');
+        updateBalance.run(amountChange, accountId, req.user.id);
+      }
     }
 
     db.exec('COMMIT');
@@ -410,7 +469,7 @@ app.post('/api/finance/transactions', authenticate, (req, res) => {
 
 app.post('/api/finance/transactions/:id/pay', authenticate, (req, res) => {
   const { id } = req.params;
-  const { paidAmount, actualAmount } = req.body;
+  const { paidAmount, actualAmount, asLoan, loanId, loanCounterpart, loanDueDate, loanTitle } = req.body;
 
   try {
     db.exec('BEGIN TRANSACTION');
@@ -463,9 +522,92 @@ app.post('/api/finance/transactions/:id/pay', authenticate, (req, res) => {
     const updateTx = db.prepare('UPDATE transactions SET status = ? WHERE id = ?');
     updateTx.run(newStatus, id);
 
-    const amountChange = tx.type === 'income' ? valueToSettle : -valueToSettle;
-    const updateBalance = db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?');
-    updateBalance.run(amountChange, tx.accountId);
+    if (asLoan) {
+      const loanType = tx.type === 'expense' ? 'borrowed' : 'lent';
+      const historyId = Math.random().toString(36).substr(2, 9);
+      const dateStr = todayStr;
+
+      if (loanId) {
+        // Vincular a empréstimo existente por ID
+        const selectLoan = db.prepare('SELECT * FROM loans WHERE id = ? AND user_id = ?');
+        const existingLoan = selectLoan.all(loanId, req.user.id)[0];
+        if (!existingLoan) {
+          db.exec('ROLLBACK');
+          return res.status(404).json({ error: 'Empréstimo associado não encontrado.' });
+        }
+
+        // Insere no histórico
+        const insertHistory = db.prepare(`
+          INSERT INTO loan_history (id, loan_id, type, amount, date, dueDate, description, direction)
+          VALUES (?, ?, 'loan', ?, ?, ?, ?, ?)
+        `);
+        insertHistory.run(
+          historyId,
+          existingLoan.id,
+          valueToSettle,
+          dateStr,
+          existingLoan.dueDate || null,
+          `Quitação de despesa/receita: ${tx.description}`,
+          loanType
+        );
+
+        // Recalcula o estado do empréstimo
+        const history = db.prepare('SELECT * FROM loan_history WHERE loan_id = ?').all(existingLoan.id);
+        const newState = recalculateLoanState(existingLoan, history);
+
+        // Atualiza a tabela de empréstimos
+        const updateLoan = db.prepare(`
+          UPDATE loans
+          SET type = ?, totalAmount = ?, paidAmount = ?, dueDate = ?, status = ?
+          WHERE id = ?
+        `);
+        updateLoan.run(newState.type, newState.totalAmount, newState.paidAmount, newState.dueDate || null, newState.status, existingLoan.id);
+      } else {
+        // Criar novo empréstimo separado
+        if (!loanCounterpart || !loanCounterpart.trim()) {
+          db.exec('ROLLBACK');
+          return res.status(400).json({ error: 'Nome do contato do empréstimo é obrigatório.' });
+        }
+        const counterpartTrimmed = loanCounterpart.trim();
+        const newLoanId = Math.random().toString(36).substr(2, 9);
+
+        const insertNewLoan = db.prepare(`
+          INSERT INTO loans (id, user_id, type, counterpart, totalAmount, paidAmount, dueDate, status, title)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        insertNewLoan.run(newLoanId, req.user.id, loanType, counterpartTrimmed, valueToSettle, 0, loanDueDate || null, 'active', loanTitle || null);
+
+        const insertHistory = db.prepare(`
+          INSERT INTO loan_history (id, loan_id, type, amount, date, dueDate, description, direction)
+          VALUES (?, ?, 'loan', ?, ?, ?, ?, ?)
+        `);
+        insertHistory.run(
+          historyId,
+          newLoanId,
+          valueToSettle,
+          dateStr,
+          loanDueDate || null,
+          `Quitação de despesa/receita: ${tx.description}`,
+          loanType
+        );
+
+        // Recalcula o estado do novo empréstimo
+        const history = db.prepare('SELECT * FROM loan_history WHERE loan_id = ?').all(newLoanId);
+        const newState = recalculateLoanState({ type: loanType, dueDate: loanDueDate }, history);
+
+        const updateLoan = db.prepare(`
+          UPDATE loans
+          SET type = ?, totalAmount = ?, paidAmount = ?, dueDate = ?, status = ?
+          WHERE id = ?
+        `);
+        updateLoan.run(newState.type, newState.totalAmount, newState.paidAmount, newState.dueDate || null, newState.status, newLoanId);
+      }
+    } else {
+      // Fluxo normal: atualiza saldo da conta bancária
+      const amountChange = tx.type === 'income' ? valueToSettle : -valueToSettle;
+      const updateBalance = db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?');
+      updateBalance.run(amountChange, tx.accountId);
+    }
 
     db.exec('COMMIT');
     
@@ -544,7 +686,7 @@ function recalculateLoanState(loan, historyItems) {
 }
 
 app.post('/api/finance/loans', authenticate, (req, res) => {
-  const { id, type, counterpart, amount, date, dueDate, description } = req.body;
+  const { id, type, counterpart, amount, date, dueDate, description, title } = req.body;
   if (!counterpart || amount === undefined || !type) {
     return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
   }
@@ -586,10 +728,10 @@ app.post('/api/finance/loans', authenticate, (req, res) => {
       const newLoanId = id || Math.random().toString(36).substr(2, 9);
       
       const insertNewLoan = db.prepare(`
-        INSERT INTO loans (id, user_id, type, counterpart, totalAmount, paidAmount, dueDate, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO loans (id, user_id, type, counterpart, totalAmount, paidAmount, dueDate, status, title)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
-      insertNewLoan.run(newLoanId, req.user.id, type, counterpart.trim(), parseFloat(amount), 0, dueDate || null, 'active');
+      insertNewLoan.run(newLoanId, req.user.id, type, counterpart.trim(), parseFloat(amount), 0, dueDate || null, 'active', title || null);
 
       const insertHistory = db.prepare(`
         INSERT INTO loan_history (id, loan_id, type, amount, date, dueDate, description, direction)

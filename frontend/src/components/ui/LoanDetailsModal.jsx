@@ -77,6 +77,7 @@ export function LoanDetailsModal({ loan, onClose, onAddAmount, onRegisterPayment
               </button>
             </div>
             <h3>{loan.counterpart}</h3>
+            {loan.title && <p>{loan.title}</p>}
           </div>
           <button className="close-btn" onClick={onClose} title="Fechar">
             <X size={18} />

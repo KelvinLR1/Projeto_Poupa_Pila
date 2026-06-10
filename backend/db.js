@@ -84,9 +84,16 @@ db.exec(`
     paidAmount REAL NOT NULL,
     dueDate TEXT,
     status TEXT NOT NULL,
+    title TEXT,
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
   );
 `);
+
+try {
+  db.exec('ALTER TABLE loans ADD COLUMN title TEXT');
+} catch (e) {
+  // Column already exists, safe to ignore
+}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS loan_history (

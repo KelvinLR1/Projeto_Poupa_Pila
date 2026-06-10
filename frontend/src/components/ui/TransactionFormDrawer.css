@@ -445,3 +445,257 @@
 .animate-slide-out {
   animation: slideOutRight 280ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* Installment Container (Grid Animation) */
+.installment-container {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 350ms cubic-bezier(0.2, 0.8, 0.2, 1), margin-top 350ms ease;
+  overflow: hidden;
+}
+
+.installment-container.open {
+  grid-template-rows: 1fr;
+  margin-top: 12px;
+}
+
+.installment-content {
+  min-height: 0;
+  transition: opacity 300ms ease, transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  opacity: 0;
+  transform: translateY(-10px) scale(0.98);
+}
+
+.installment-container.open .installment-content {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* Installment Fields */
+.installment-fields {
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.installment-notice {
+  margin: 12px 0 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.animate-fade-in {
+  animation: fadeIn 300ms ease forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Installments Preview Wrapper and List */
+.installments-preview-wrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 320ms cubic-bezier(0.16, 1, 0.3, 1), margin-top 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  margin-top: 0;
+}
+
+.installments-preview-wrapper.expanded {
+  grid-template-rows: 1fr;
+  margin-top: 16px;
+}
+
+.installments-preview-list {
+  min-height: 0;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  padding: 12px;
+  max-height: 280px; /* Fits exactly 3 rows; the 4th will be cut off to indicate scroll availability */
+  overflow-y: auto;
+  position: relative;
+  transition: opacity 300ms ease, transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 0;
+  transform: scale(0.985) translateY(-6px);
+}
+
+.installments-preview-wrapper.expanded .installments-preview-list {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+/* Custom Scrollbar for Preview List */
+.installments-preview-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.installments-preview-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  border-left: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.installments-preview-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.35);
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.installments-preview-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.preview-list-title {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.installments-preview-header {
+  display: grid;
+  grid-template-columns: 50px 1fr 140px;
+  gap: 12px;
+  padding: 0 8px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.installment-preview-row {
+  display: grid;
+  grid-template-columns: 50px 1fr 140px;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  animation: slideInRow 250ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideInRow {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.installment-preview-row:last-child {
+  border-bottom: none;
+}
+
+.installment-num {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.amount-input-wrapper.sm {
+  height: 32px;
+  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.amount-input-wrapper.sm .currency-prefix {
+  font-size: 0.75rem;
+  padding-left: 8px;
+  color: var(--text-muted);
+  position: absolute;
+  left: 0;
+  pointer-events: none;
+}
+
+.amount-input-wrapper.sm input.sm-input {
+  font-size: 0.85rem;
+  padding: 4px 8px 4px 28px !important;
+  height: 100%;
+  width: 100%;
+  background: transparent !important;
+  border: none !important;
+  color: var(--text-primary) !important;
+}
+
+.amount-input-wrapper.sm input.sm-input:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.amount-input-wrapper.sm.has-error {
+  border-color: rgba(239, 68, 68, 0.4) !important;
+  background: rgba(239, 68, 68, 0.04) !important;
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.15) !important;
+}
+
+/* Installment warning banner */
+.installment-warning {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 6px;
+  color: #fca5a5;
+  font-size: 0.8rem;
+  animation: fadeIn 200ms ease forwards;
+}
+
+.warning-message-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.warning-message-row svg {
+  color: #f87171;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.warning-message-row span {
+  line-height: 1.4;
+}
+
+.warning-actions {
+  display: flex;
+  gap: 8px;
+  padding-left: 24px;
+}
+
+.warning-action-btn {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fecaca;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.warning-action-btn:hover {
+  background: rgba(239, 68, 68, 0.28);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #fff;
+}

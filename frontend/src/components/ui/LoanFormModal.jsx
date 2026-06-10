@@ -16,6 +16,7 @@ export function LoanFormModal({ onClose, initialCounterpart = '', initialType = 
   const [dueDate, setDueDate] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [description, setDescription] = useState('');
+  const [loanTitle, setLoanTitle] = useState('');
 
   const isDuplicate = !initialCounterpart && loans.some(
     l => l.counterpart.toLowerCase().trim() === counterpart.toLowerCase().trim() && l.type === type
@@ -29,6 +30,7 @@ export function LoanFormModal({ onClose, initialCounterpart = '', initialType = 
     addLoan({
       type,
       counterpart,
+      title: loanTitle,
       amount: parsedAmount,
       date,
       dueDate,
@@ -99,6 +101,19 @@ export function LoanFormModal({ onClose, initialCounterpart = '', initialType = 
               </div>
             )}
           </div>
+
+          {!initialCounterpart && (
+            <div className="form-group">
+              <label>Identificação / Título (Opcional)</label>
+              <input 
+                type="text" 
+                className="form-input"
+                value={loanTitle}
+                onChange={(e) => setLoanTitle(e.target.value)}
+                placeholder="Ex: Reforma da casa, Viagem, etc."
+              />
+            </div>
+          )}
 
           <div className="form-group">
             <label>Descrição / Motivo</label>
