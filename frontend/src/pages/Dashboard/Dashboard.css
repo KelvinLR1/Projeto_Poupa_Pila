@@ -1,4 +1,4 @@
-﻿.dashboard {
+.dashboard {
   display: flex;
   flex-direction: column;
   gap: 28px;
@@ -88,6 +88,7 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+  min-height: 28px;
 }
 
 .section-header .section-title {

@@ -193,6 +193,25 @@ export function FinanceProvider({ children }) {
     }
   };
 
+  const deleteLoanHistoryItem = async (historyId) => {
+    try {
+      const res = await fetch(`/api/finance/loans/history/${historyId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        await fetchFinanceData();
+        return data;
+      }
+    } catch (e) {
+      console.error('Erro ao excluir lançamento de empréstimo:', e);
+    }
+    return null;
+  };
+
   return (
     <FinanceContext.Provider value={{
       accounts,
@@ -208,7 +227,8 @@ export function FinanceProvider({ children }) {
       addTransaction,
       addLoan,
       payLoan,
-      toggleLoanType
+      toggleLoanType,
+      deleteLoanHistoryItem
     }}>
       {children}
     </FinanceContext.Provider>

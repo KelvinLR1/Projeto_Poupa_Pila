@@ -3,8 +3,8 @@
 ═══════════════════════════════════════════════ */
 .layout-container {
   display: flex;
-  height: 100vh;
-  width: 100vw;
+  height: 100%;
+  width: 100%;
   overflow: hidden;
   padding: 16px;
   gap: 16px;
@@ -204,6 +204,7 @@
   flex-direction: column;
   height: 100%;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   position: relative;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-color);
@@ -224,7 +225,7 @@
   position: sticky;
   top: 0;
   z-index: 5;
-  background: rgba(10,10,12,0.6);
+  background: #0a0a0c;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }

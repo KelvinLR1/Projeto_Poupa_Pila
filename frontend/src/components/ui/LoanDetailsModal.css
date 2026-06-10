@@ -51,6 +51,7 @@
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 14px;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .loan-metric-item {
@@ -87,6 +88,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .loan-progress-header {
@@ -133,6 +135,7 @@
   border-radius: 14px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.02);
+  flex-shrink: 0;
 }
 
 .loan-col-divider {
@@ -308,3 +311,29 @@
     height: 1px;
   }
 }
+
+/* Botão de excluir item do histórico */
+.loan-item-delete-btn {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 3px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 150ms ease;
+}
+
+.loan-col-item:hover .loan-item-delete-btn {
+  opacity: 1;
+}
+
+.loan-item-delete-btn:hover {
+  color: var(--accent-coral);
+  background: rgba(244, 63, 94, 0.08);
+}
+

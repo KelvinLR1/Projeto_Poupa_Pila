@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useFinance } from '../../context/FinanceContext';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { GlassCard } from '../../components/ui/GlassCard';
@@ -18,6 +18,38 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
   const [selectedTxForPayment, setSelectedTxForPayment] = useState(null);
   const [selectedTxForDetails, setSelectedTxForDetails] = useState(null);
   const [isAddingTransaction, setIsAddingTransaction] = useState(false);
+
+  const allRef = useRef(null);
+  const payableRef = useRef(null);
+  const receivableRef = useRef(null);
+  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
+
+  useEffect(() => {
+    const updateIndicator = () => {
+      let activeRef;
+      if (activeTab === 'all') activeRef = allRef;
+      else if (activeTab === 'payable') activeRef = payableRef;
+      else if (activeTab === 'receivable') activeRef = receivableRef;
+
+      if (activeRef && activeRef.current) {
+        const el = activeRef.current;
+        setIndicatorStyle({
+          left: el.offsetLeft,
+          width: el.offsetWidth
+        });
+      }
+    };
+
+    updateIndicator();
+    // Add a tiny delay to ensure font-rendering is done and layouts are stable
+    const timer = setTimeout(updateIndicator, 50);
+
+    window.addEventListener('resize', updateIndicator);
+    return () => {
+      window.removeEventListener('resize', updateIndicator);
+      clearTimeout(timer);
+    };
+  }, [activeTab]);
 
   const handleConfirmPayment = ({ transaction, paidAmount, actualAmount }) => {
     markTransactionAsPaid(transaction.id, paidAmount, actualAmount);
@@ -62,12 +94,14 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
       {/* Navegação de Abas Internas */}
       <div className="transactions-tabs">
         <button 
+          ref={allRef}
           className={`tx-tab ${activeTab === 'all' ? 'active' : ''}`}
           onClick={() => setActiveTab('all')}
         >
           Extrato Completo
         </button>
         <button 
+          ref={payableRef}
           className={`tx-tab ${activeTab === 'payable' ? 'active text-coral' : ''}`}
           onClick={() => setActiveTab('payable')}
         >
@@ -77,6 +111,7 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
           </Badge>
         </button>
         <button 
+          ref={receivableRef}
           className={`tx-tab ${activeTab === 'receivable' ? 'active text-emerald' : ''}`}
           onClick={() => setActiveTab('receivable')}
         >
@@ -85,6 +120,13 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
             {transactions.filter(t => t.type === 'income' && t.status === 'pending').length}
           </Badge>
         </button>
+        <div 
+          className={`tx-tab-indicator ${activeTab}`}
+          style={{
+            width: indicatorStyle.width,
+            transform: `translateX(${indicatorStyle.left}px)`
+          }}
+        />
       </div>
 
       <GlassCard className="transactions-list-card">
@@ -113,7 +155,7 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
           </div>
         </div>
 
-        <div className="transactions-table">
+        <div className="transactions-table animate-fade-in" key={activeTab}>
           {filteredTransactions.map(tx => (
              <div 
                key={tx.id} 

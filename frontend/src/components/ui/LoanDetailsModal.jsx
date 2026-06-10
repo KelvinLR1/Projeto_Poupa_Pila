@@ -4,12 +4,21 @@ import { useFinance } from '../../context/FinanceContext';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { Button } from './Button';
 import { Badge } from './Badge';
-import { X, Calendar, Plus, Wallet, ArrowUpRight, ArrowDownRight, ArrowLeftRight } from 'lucide-react';
+import { X, Calendar, Plus, Wallet, ArrowUpRight, ArrowDownRight, ArrowLeftRight, Trash2 } from 'lucide-react';
 import './PaymentModal.css';
 import './LoanDetailsModal.css';
 
 export function LoanDetailsModal({ loan, onClose, onAddAmount, onRegisterPayment }) {
-  const { toggleLoanType } = useFinance();
+  const { toggleLoanType, deleteLoanHistoryItem } = useFinance();
+
+  const handleDeleteItem = async (itemId) => {
+    if (window.confirm('Excluir este lançamento e atualizar os saldos do empréstimo?')) {
+      const result = await deleteLoanHistoryItem(itemId);
+      if (result && result.loanDeleted) {
+        onClose();
+      }
+    }
+  };
   const remaining    = loan.totalAmount - loan.paidAmount;
   const isSettled    = loan.status === 'settled';
   const progress     = Math.min((loan.paidAmount / loan.totalAmount) * 100, 100);
@@ -140,6 +149,13 @@ export function LoanDetailsModal({ loan, onClose, onAddAmount, onRegisterPayment
                           {formatDate(item.dueDate)}
                         </span>
                       )}
+                      <button 
+                        className="loan-item-delete-btn" 
+                        title="Excluir lançamento"
+                        onClick={() => handleDeleteItem(item.id)}
+                      >
+                        <Trash2 size={12} />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -174,6 +190,13 @@ export function LoanDetailsModal({ loan, onClose, onAddAmount, onRegisterPayment
                     </div>
                     <div className="loan-col-item-meta">
                       <span>{formatDate(item.date)}</span>
+                      <button 
+                        className="loan-item-delete-btn" 
+                        title="Excluir lançamento"
+                        onClick={() => handleDeleteItem(item.id)}
+                      >
+                        <Trash2 size={12} />
+                      </button>
                     </div>
                   </div>
                 ))}

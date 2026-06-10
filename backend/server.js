@@ -711,6 +711,60 @@ app.post('/api/finance/loans/:id/toggle-type', authenticate, (req, res) => {
   }
 });
 
+app.delete('/api/finance/loans/history/:historyId', authenticate, (req, res) => {
+  const { historyId } = req.params;
+  try {
+    db.exec('BEGIN TRANSACTION');
+    
+    // Busca o item no histórico
+    const selectHistory = db.prepare('SELECT * FROM loan_history WHERE id = ?');
+    const historyItem = selectHistory.all(historyId)[0];
+    if (!historyItem) {
+      db.exec('ROLLBACK');
+      return res.status(404).json({ error: 'Lançamento não encontrado.' });
+    }
+    
+    // Busca o empréstimo associado e valida o usuário
+    const selectLoan = db.prepare('SELECT * FROM loans WHERE id = ? AND user_id = ?');
+    const loan = selectLoan.all(historyItem.loan_id, req.user.id)[0];
+    if (!loan) {
+      db.exec('ROLLBACK');
+      return res.status(403).json({ error: 'Acesso negado.' });
+    }
+    
+    // Exclui o item do histórico
+    const deleteHistory = db.prepare('DELETE FROM loan_history WHERE id = ?');
+    deleteHistory.run(historyId);
+    
+    // Busca os itens restantes
+    const remainingHistory = db.prepare('SELECT * FROM loan_history WHERE loan_id = ?').all(loan.id);
+    
+    if (remainingHistory.length === 0) {
+      // Se não sobrou nenhum registro, exclui o empréstimo por completo
+      const deleteLoan = db.prepare('DELETE FROM loans WHERE id = ?');
+      deleteLoan.run(loan.id);
+      db.exec('COMMIT');
+      return res.json({ success: true, loanDeleted: true });
+    } else {
+      // Caso contrário, recalcula o estado do empréstimo
+      const newState = recalculateLoanState(loan, remainingHistory);
+      const updateLoan = db.prepare(`
+        UPDATE loans
+        SET type = ?, totalAmount = ?, paidAmount = ?, dueDate = ?, status = ?
+        WHERE id = ?
+      `);
+      updateLoan.run(newState.type, newState.totalAmount, newState.paidAmount, newState.dueDate || null, newState.status, loan.id);
+      db.exec('COMMIT');
+      return res.json({ success: true, loanDeleted: false });
+    }
+  } catch (error) {
+    db.exec('ROLLBACK');
+    console.error('Erro ao excluir lançamento de empréstimo:', error);
+    res.status(500).json({ error: 'Erro ao excluir lançamento.' });
+  }
+});
+
+
 // ─── Rotas do Cofre de Senhas ───
 
 app.get('/api/vault/data', authenticate, (req, res) => {

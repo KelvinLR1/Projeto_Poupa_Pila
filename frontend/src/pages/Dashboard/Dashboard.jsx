@@ -59,7 +59,9 @@ export function Dashboard({ setActiveTab, setFilterAccountId }) {
       <div className="dashboard-grid">
         {/* Contas */}
         <section className="accounts-section">
-          <h3 className="section-title">Minhas Contas</h3>
+          <div className="section-header">
+            <h3 className="section-title">Minhas Contas</h3>
+          </div>
           <div className="accounts-list">
             {accounts.map(acc => (
               <GlassCard 

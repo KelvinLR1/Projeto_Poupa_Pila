@@ -1,4 +1,4 @@
-﻿.transactions-page {
+.transactions-page {
   display: flex;
   flex-direction: column;
   gap: 32px;
@@ -80,6 +80,13 @@
   animation: slideUp 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+.transaction-item:nth-child(1) { animation-delay: 0ms; }
+.transaction-item:nth-child(2) { animation-delay: 45ms; }
+.transaction-item:nth-child(3) { animation-delay: 90ms; }
+.transaction-item:nth-child(4) { animation-delay: 135ms; }
+.transaction-item:nth-child(5) { animation-delay: 180ms; }
+.transaction-item:nth-child(n+6) { animation-delay: 225ms; }
+
 .transaction-item:hover {
   background: rgba(255, 255, 255, 0.025);
   transform: translateX(4px);
@@ -141,35 +148,109 @@
   gap: 16px;
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 1px;
+  position: relative;
 }
 
 .tx-tab {
   display: flex;
   align-items: center;
+  gap: 8px;
   padding: 12px 16px;
   color: var(--text-secondary);
   font-weight: 500;
   border-bottom: 2px solid transparent;
-  transition: all var(--transition-fast);
+  transition: all var(--transition-normal);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.tx-tab .badge {
+  transition: transform var(--transition-fast);
 }
 
 .tx-tab:hover {
   color: var(--text-primary);
 }
 
+.tx-tab:hover .badge {
+  transform: scale(1.1);
+}
+
 .tx-tab.active {
   color: var(--text-primary);
-  border-bottom-color: var(--text-primary);
+  text-shadow: 0 0 12px rgba(255, 255, 255, 0.2);
 }
 
 .tx-tab.active.text-coral {
   color: var(--accent-coral);
-  border-bottom-color: var(--accent-coral);
+  text-shadow: 0 0 12px rgba(244, 63, 94, 0.2);
+}
+
+.tx-tab.active.text-coral .badge {
+  animation: badgePulseCoral 2s infinite ease-in-out;
 }
 
 .tx-tab.active.text-emerald {
   color: var(--accent-emerald);
-  border-bottom-color: var(--accent-emerald);
+  text-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+}
+
+.tx-tab.active.text-emerald .badge {
+  animation: badgePulseEmerald 2s infinite ease-in-out;
+}
+
+/* Sliding active tab line indicator */
+.tx-tab-indicator {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  border-radius: 99px;
+  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1), 
+              width 320ms cubic-bezier(0.16, 1, 0.3, 1), 
+              background-color 320ms ease,
+              box-shadow 320ms ease;
+  z-index: 2;
+}
+
+.tx-tab-indicator.all {
+  background-color: var(--text-primary);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+}
+
+.tx-tab-indicator.payable {
+  background-color: var(--accent-coral);
+  box-shadow: 0 0 8px rgba(244, 63, 94, 0.5);
+}
+
+.tx-tab-indicator.receivable {
+  background-color: var(--accent-emerald);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+}
+
+@keyframes badgePulseCoral {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.4);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(244, 63, 94, 0);
+    transform: scale(1.05);
+  }
+}
+
+@keyframes badgePulseEmerald {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+    transform: scale(1.05);
+  }
 }
 
 .empty-state {
