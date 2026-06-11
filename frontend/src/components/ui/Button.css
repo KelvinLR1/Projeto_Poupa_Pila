@@ -31,14 +31,16 @@
 
 /* Variantes */
 .btn-primary {
-  background: var(--text-primary);
-  color: #000000;
-  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+  background: var(--accent-emerald);
+  color: #020617;
+  font-weight: 600;
+  box-shadow: 0 4px 14px var(--accent-emerald-glow);
 }
 
 .btn-primary:hover {
-  background: #ffffff;
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+  background: var(--accent-emerald);
+  filter: brightness(1.12);
+  box-shadow: 0 0 20px var(--accent-emerald-glow);
   transform: translateY(-2px);
 }
 

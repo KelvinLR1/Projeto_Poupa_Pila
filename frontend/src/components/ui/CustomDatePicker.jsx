@@ -31,6 +31,7 @@ function formatDisplayDate(val) {
 export function CustomDatePicker({ value, onChange, placeholder = 'Selecione uma data...', className = '', disabled = false }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
+  const [openUpward, setOpenUpward] = useState(false);
 
   const selectedDate = parseDate(value);
   const [currentMonth, setCurrentMonth] = useState(selectedDate.getMonth());
@@ -59,6 +60,22 @@ export function CustomDatePicker({ value, onChange, placeholder = 'Selecione uma
       document.removeEventListener('mousedown', handleOutsideClick);
     };
   }, [isOpen]);
+
+  const handleTriggerClick = () => {
+    if (disabled) return;
+    
+    if (!isOpen && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      // Se tiver menos de 320px de espaço abaixo, e tiver espaço acima, abre pra cima
+      if (spaceBelow < 320 && rect.top > 320) {
+        setOpenUpward(true);
+      } else {
+        setOpenUpward(false);
+      }
+    }
+    setIsOpen(prev => !prev);
+  };
 
   const handleSelectDay = (cell) => {
     const dateStr = formatDateString(cell.year, cell.month, cell.day);
@@ -130,8 +147,8 @@ export function CustomDatePicker({ value, onChange, placeholder = 'Selecione uma
   const today = new Date();
 
   return (
-    <div className={`custom-datepicker-container ${className} ${isOpen ? 'is-open' : ''} ${disabled ? 'disabled' : ''}`} ref={containerRef}>
-      <div className="custom-datepicker-trigger" onClick={() => !disabled && setIsOpen(prev => !prev)}>
+    <div className={`custom-datepicker-container ${className} ${isOpen ? 'is-open' : ''} ${disabled ? 'disabled' : ''} ${openUpward ? 'open-upward' : ''}`} ref={containerRef}>
+      <div className="custom-datepicker-trigger" onClick={handleTriggerClick}>
         <span className={value ? 'has-value' : 'placeholder'}>
           {value ? formatDisplayDate(value) : placeholder}
         </span>

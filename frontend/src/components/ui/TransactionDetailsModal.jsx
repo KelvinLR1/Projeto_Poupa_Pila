@@ -8,7 +8,22 @@ import './PaymentModal.css';
 import './TransactionDetailsModal.css';
 
 export function TransactionDetailsModal({ transaction, onCancel, onPayRemaining }) {
+  const [isClosing, setIsClosing] = React.useState(false);
+
+  React.useEffect(() => {
+    if (transaction) {
+      setIsClosing(false);
+    }
+  }, [transaction]);
+
   if (!transaction) return null;
+
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      onCancel();
+    }, 180);
+  };
 
   const settlements = transaction.settlements || [];
   const alreadyPaid = settlements.reduce((acc, s) => acc + s.amount, 0);
@@ -21,7 +36,7 @@ export function TransactionDetailsModal({ transaction, onCancel, onPayRemaining 
   const statusLabel  = isPaid ? 'Quitado' : transaction.status === 'partial' ? 'Parcial' : 'Pendente';
 
   return createPortal(
-    <div className="modal-overlay" onClick={onCancel}>
+    <div className={`modal-overlay ${isClosing ? 'closing' : ''}`} onClick={handleClose}>
       <div className="modal-container tx-details-container" onClick={e => e.stopPropagation()}>
 
         {/* Header */}
@@ -47,7 +62,7 @@ export function TransactionDetailsModal({ transaction, onCancel, onPayRemaining 
               </div>
             </div>
           </div>
-          <button className="close-btn" onClick={onCancel} title="Fechar">
+          <button className="close-btn" onClick={handleClose} title="Fechar">
             <X size={18} />
           </button>
         </div>
@@ -124,7 +139,7 @@ export function TransactionDetailsModal({ transaction, onCancel, onPayRemaining 
         <div className="modal-footer">
           {remaining > 0 ? (
             <>
-              <Button variant="secondary" onClick={onCancel}>Fechar</Button>
+              <Button variant="secondary" onClick={handleClose}>Fechar</Button>
               <Button
                 variant="primary"
                 icon={<Check size={16} />}
@@ -134,7 +149,7 @@ export function TransactionDetailsModal({ transaction, onCancel, onPayRemaining 
               </Button>
             </>
           ) : (
-            <Button variant="secondary" onClick={onCancel}>Fechar</Button>
+            <Button variant="secondary" onClick={handleClose}>Fechar</Button>
           )}
         </div>
       </div>

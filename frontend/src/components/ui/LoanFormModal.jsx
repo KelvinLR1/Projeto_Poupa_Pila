@@ -50,7 +50,7 @@ export function LoanFormModal({ onClose, initialCounterpart = '', initialType = 
 
   return createPortal(
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-container loan-form-modal-container" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="modal-header-content">
             <h3>{title}</h3>
@@ -61,7 +61,7 @@ export function LoanFormModal({ onClose, initialCounterpart = '', initialType = 
           </button>
         </div>
 
-        <form className="modal-body" onSubmit={handleSubmit}>
+        <form className="modal-body loan-form-modal-body" onSubmit={handleSubmit}>
           {/* Type Selector */}
           <div className="type-selector">
             <button 

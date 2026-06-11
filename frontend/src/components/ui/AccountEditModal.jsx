@@ -47,7 +47,7 @@ export function AccountEditModal({ account, onClose }) {
           </button>
         </div>
 
-        <form className="modal-body" onSubmit={handleSave}>
+        <form className="modal-body acc-edit-body" onSubmit={handleSave}>
 
           {/* Preview da cor */}
           <div className="acc-color-preview" style={{ borderColor: color, boxShadow: `0 0 20px ${color}30` }}>

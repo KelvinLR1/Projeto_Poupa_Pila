@@ -2,6 +2,11 @@
 
 .acc-edit-container {
   max-width: 440px;
+  overflow: visible !important;
+}
+
+.acc-edit-body {
+  overflow: visible !important;
 }
 
 /* Preview da conta no topo do body */

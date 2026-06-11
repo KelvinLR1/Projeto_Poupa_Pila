@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import './OFXImport.css';
 import { CustomSelect } from '../../components/ui/CustomSelect';
+import { ReconcileSelectModal } from '../../components/ui/ReconcileSelectModal';
 
 // Calcula a similaridade entre dois textos (para conciliação)
 function similarity(a = '', b = '') {
@@ -22,13 +23,15 @@ function similarity(a = '', b = '') {
 }
 
 export function OFXImport() {
-  const { transactions, accounts, addTransaction } = useFinance();
+  const { transactions, accounts, addTransaction, markTransactionAsPaid } = useFinance();
   const [isDragging, setIsDragging] = useState(false);
   const [parsed, setParsed] = useState(null); // { transactions, balance, bankId }
   const [accountId, setAccountId] = useState(accounts[0]?.id || '');
   const [step, setStep] = useState('upload'); // 'upload' | 'review' | 'done'
   const [selectedTx, setSelectedTx] = useState({}); // fitId → boolean (selecionado para importar)
   const [error, setError] = useState(null);
+  const [manualLinks, setManualLinks] = useState({}); // fitId -> sysTx.id ou null (caso explicitamente desvinculado)
+  const [selectingFitId, setSelectingFitId] = useState(null);
 
   // Processa o arquivo OFX
   const processFile = useCallback((file) => {
@@ -82,26 +85,43 @@ export function OFXImport() {
     );
   }, [transactions]);
 
+  // Retorna o vínculo ativo da transação OFX (seja automático ou configurado manualmente)
+  const getActiveMatch = useCallback((tx) => {
+    if (manualLinks[tx.fitId] === null) return null; // Usuário desvinculou explicitamente
+    if (manualLinks[tx.fitId]) {
+      return transactions.find(t => t.id === manualLinks[tx.fitId]);
+    }
+    return findMatch(tx);
+  }, [manualLinks, transactions, findMatch]);
+
   // Importa as transações selecionadas
-  const handleImport = () => {
+  const handleImport = async () => {
     const toImport = parsed.transactions.filter(tx => selectedTx[tx.fitId]);
     let importedCount = 0;
-    toImport.forEach(tx => {
-      const match = findMatch(tx);
-      if (!match) {
-        // Adiciona ao contexto como nova transação
-        addTransaction({
+
+    for (const tx of toImport) {
+      const match = getActiveMatch(tx);
+      if (match) {
+        // Se já existe e está como pendente no sistema, quita/marca como paga
+        if (match.status === 'pending') {
+          await markTransactionAsPaid(match.id);
+        }
+        // Se já está paga, apenas ignora para não criar duplicado
+      } else {
+        // Sem correspondência: adiciona como nova transação paga
+        await addTransaction({
           accountId: accountId,
           type: tx.type,
           amount: tx.amount,
           category: tx.type === 'income' ? 'Receita OFX' : 'Despesa OFX',
           description: tx.description,
           date: tx.date,
-          status: 'paid', // Importado do banco = já foi processado
+          status: 'paid', // Transações consolidadas do extrato já são pagas
         });
         importedCount++;
       }
-    });
+    }
+
     setStep('done');
     setParsed(prev => ({ ...prev, importedCount }));
   };
@@ -111,6 +131,8 @@ export function OFXImport() {
     setStep('upload');
     setError(null);
     setSelectedTx({});
+    setManualLinks({});
+    setSelectingFitId(null);
   };
 
   const toggleSelect = (fitId) => {
@@ -118,8 +140,8 @@ export function OFXImport() {
   };
 
   const selectedCount = Object.values(selectedTx).filter(Boolean).length;
-  const newCount = parsed?.transactions.filter(tx => selectedTx[tx.fitId] && !findMatch(tx)).length || 0;
-  const duplicateCount = parsed?.transactions.filter(tx => selectedTx[tx.fitId] && findMatch(tx)).length || 0;
+  const newCount = parsed?.transactions.filter(tx => selectedTx[tx.fitId] && !getActiveMatch(tx)).length || 0;
+  const duplicateCount = parsed?.transactions.filter(tx => selectedTx[tx.fitId] && getActiveMatch(tx)).length || 0;
 
   return (
     <div className="ofx-page">
@@ -229,36 +251,95 @@ export function OFXImport() {
             </div>
 
             {parsed.transactions.map((tx) => {
-              const match = findMatch(tx);
+              const activeMatch = getActiveMatch(tx);
               const isSelected = !!selectedTx[tx.fitId];
 
               return (
                 <div
                   key={tx.fitId}
-                  className={`ofx-tx-item ${isSelected ? 'selected' : 'unselected'} ${match ? 'is-duplicate' : ''}`}
-                  onClick={() => toggleSelect(tx.fitId)}
+                  className={`ofx-tx-item-wrapper ${isSelected ? 'selected' : 'unselected'} ${activeMatch ? 'has-match' : 'no-match'}`}
                 >
-                  <div className="ofx-tx-checkbox">
-                    {isSelected ? <Check size={14} /> : null}
+                  <div
+                    className={`ofx-tx-item ${activeMatch ? 'is-duplicate' : ''}`}
+                    onClick={() => toggleSelect(tx.fitId)}
+                  >
+                    <div className="ofx-tx-checkbox">
+                      {isSelected ? <Check size={14} /> : null}
+                    </div>
+                    <div className="tx-icon glass">
+                      {tx.type === 'income'
+                        ? <ArrowUpRight size={18} className="text-emerald" />
+                        : <ArrowDownRight size={18} className="text-coral" />
+                      }
+                    </div>
+                    <div className="tx-details">
+                      <h4>{tx.description}</h4>
+                      <p>{formatDate(tx.date)}</p>
+                    </div>
+                    <div className="tx-amount-col">
+                      <span className={`tx-amount ${tx.type === 'income' ? 'text-emerald' : ''}`}>
+                        {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}
+                      </span>
+                      {activeMatch
+                        ? <Badge variant="warning">Já existe</Badge>
+                        : <Badge variant="success">Nova</Badge>
+                      }
+                    </div>
                   </div>
-                  <div className="tx-icon glass">
-                    {tx.type === 'income'
-                      ? <ArrowUpRight size={18} className="text-emerald" />
-                      : <ArrowDownRight size={18} className="text-coral" />
-                    }
-                  </div>
-                  <div className="tx-details">
-                    <h4>{tx.description}</h4>
-                    <p>{formatDate(tx.date)}</p>
-                  </div>
-                  <div className="tx-amount-col">
-                    <span className={`tx-amount ${tx.type === 'income' ? 'text-emerald' : ''}`}>
-                      {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}
-                    </span>
-                    {match
-                      ? <Badge variant="warning">Já existe</Badge>
-                      : <Badge variant="success">Nova</Badge>
-                    }
+
+                  {/* Informações de Conciliação */}
+                  <div className="reconciliation-info">
+                    {activeMatch ? (
+                      <div className="rec-matched-container">
+                        <div className="rec-match-details">
+                          <span className="rec-label">Correspondência:</span>
+                          <span className="rec-text-desc">
+                            {activeMatch.description || 'Sem descrição'} ({formatDate(activeMatch.date)}) — {formatCurrency(activeMatch.amount)} ({accounts.find(a => a.id === activeMatch.accountId)?.name || 'Conta desconhecida'})
+                          </span>
+                        </div>
+                        <div className="rec-actions">
+                          <button
+                            type="button"
+                            className="rec-action-btn change-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectingFitId(tx.fitId);
+                            }}
+                          >
+                            Alterar vínculo
+                          </button>
+                          <span className="divider">|</span>
+                          <button
+                            type="button"
+                            className="rec-action-btn unlink-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setManualLinks(prev => ({ ...prev, [tx.fitId]: null }));
+                            }}
+                          >
+                            Desvincular (Importar como nova)
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rec-unmatched-container">
+                        <span className="rec-text-desc text-muted">
+                          Sem correspondência (será importada como nova transação quitada)
+                        </span>
+                        <div className="rec-actions">
+                          <button
+                            type="button"
+                            className="rec-action-btn link-btn-text"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectingFitId(tx.fitId);
+                            }}
+                          >
+                            Vincular a lançamento existente
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -271,9 +352,9 @@ export function OFXImport() {
               variant="primary"
               icon={<Check size={18} />}
               onClick={handleImport}
-              disabled={newCount === 0}
+              disabled={selectedCount === 0}
             >
-              Importar {newCount} transação(ões) nova(s)
+              Confirmar Importação ({selectedCount})
             </Button>
           </div>
         </>
@@ -285,12 +366,25 @@ export function OFXImport() {
           <div className="done-icon">
             <CheckCircle size={64} className="text-emerald" />
           </div>
-          <h3>{parsed.importedCount} transação(ões) importada(s) com sucesso!</h3>
-          <p>Os lançamentos foram adicionados ao seu extrato e o saldo da conta foi atualizado.</p>
+          <h3>{parsed.importedCount} transação(ões) importada(s)/conciliada(s) com sucesso!</h3>
+          <p>Os lançamentos foram atualizados e consolidados no seu extrato.</p>
           <Button variant="primary" onClick={reset} icon={<Upload size={18} />}>
-            Importar Outro Arquivo
+            Importar Outro Extrato
           </Button>
         </GlassCard>
+      )}
+
+      {selectingFitId && (
+        <ReconcileSelectModal
+          ofxTx={parsed.transactions.find(t => t.fitId === selectingFitId)}
+          transactions={transactions}
+          accounts={accounts}
+          onSelect={(sysTx) => {
+            setManualLinks(prev => ({ ...prev, [selectingFitId]: sysTx.id }));
+            setSelectingFitId(null);
+          }}
+          onClose={() => setSelectingFitId(null)}
+        />
       )}
     </div>
   );

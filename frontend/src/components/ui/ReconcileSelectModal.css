@@ -1,0 +1,500 @@
+/* =================================================================
+   ReconcileSelectModal – Layout Premium
+   ================================================================= */
+
+/* Animação de entrada do modal */
+@keyframes reconcileModalIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.reconcile-select-container {
+  max-width: 680px;
+  width: 96%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  animation: reconcileModalIn 0.22s cubic-bezier(0.34, 1.3, 0.64, 1) forwards;
+}
+
+.reconcile-select-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 24px;
+  overflow: visible;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ================================================================
+   Painel OFX Origem
+   ================================================================ */
+.ofx-source-info {
+  position: relative;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.04), rgba(255,255,255,0.01));
+  border: 1px solid rgba(16, 185, 129, 0.18);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  margin-top: 6px;
+}
+
+.ofx-source-info .info-badge {
+  position: absolute;
+  top: -10px;
+  left: 16px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 2px 9px;
+  border-radius: var(--radius-full);
+  background: var(--accent-emerald);
+  color: #020617;
+  box-shadow: 0 2px 10px var(--accent-emerald-glow);
+}
+
+.ofx-source-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ofx-type-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.ofx-type-icon.income {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--accent-emerald);
+}
+.ofx-type-icon.expense {
+  background: rgba(244, 63, 94, 0.12);
+  color: #f43f5e;
+}
+
+.ofx-source-details { flex: 1; min-width: 0; }
+.ofx-source-details h4 {
+  margin: 0 0 2px;
+  font-size: 0.93rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ofx-source-details p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.ofx-source-amount {
+  font-size: 1.05rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.ofx-source-amount.income { color: var(--accent-emerald); }
+.ofx-source-amount.expense { color: #f43f5e; }
+
+/* ================================================================
+   Barra de busca
+   ================================================================ */
+.search-bar-wrapper {
+  position: relative;
+}
+
+.search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  padding: 11px 40px 11px 40px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  outline: none;
+  transition: all var(--transition-fast);
+  box-sizing: border-box;
+}
+.search-input::placeholder { color: var(--text-muted); }
+.search-input:focus {
+  border-color: var(--accent-emerald);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.search-clear-btn {
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255,255,255,0.06);
+  border: none;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+.search-clear-btn:hover {
+  background: rgba(255,255,255,0.12);
+  color: var(--text-primary);
+}
+
+.search-highlight {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--accent-emerald);
+  border-radius: 2px;
+  padding: 0 2px;
+  font-weight: 700;
+}
+
+/* ================================================================
+   Linha de filtros (tudo em uma linha)
+   ================================================================ */
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+
+.filter-icon-lead {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* CustomSelect compacto */
+.filter-select-sm {
+  width: auto !important;
+  min-width: 0 !important;
+  flex-shrink: 0;
+}
+.filter-select-sm .custom-select-trigger {
+  padding: 5px 10px !important;
+  font-size: 0.78rem !important;
+  border-radius: var(--radius-full) !important;
+  min-height: 0 !important;
+  white-space: nowrap;
+}
+.filter-select-sm .custom-select-options {
+  font-size: 0.8rem;
+  min-width: 130px;
+}
+
+.filter-sep {
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+/* Toggle chip */
+.filter-toggle {
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.filter-toggle:hover {
+  border-color: rgba(255,255,255,0.2);
+  color: var(--text-secondary);
+}
+.filter-toggle.active {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: var(--accent-emerald);
+  font-weight: 600;
+}
+
+/* CustomDatePicker compacto como pill */
+.filter-datepicker {
+  width: auto !important;
+  min-width: 0 !important;
+  flex-shrink: 0;
+}
+.filter-datepicker .custom-datepicker-trigger {
+  padding: 5px 10px !important;
+  font-size: 0.78rem !important;
+  border-radius: var(--radius-full) !important;
+  min-height: 0 !important;
+  white-space: nowrap;
+  width: auto !important;
+}
+.filter-datepicker .datepicker-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.filter-date-clear {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 3px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--transition-fast);
+  flex-shrink: 0;
+}
+.filter-date-clear:hover { color: #f43f5e; }
+
+/* Contagem e limpar */
+/* Linha de resultados abaixo dos filtros */
+.results-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px;
+}
+
+.results-count {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.clear-all-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color var(--transition-fast);
+}
+.clear-all-btn:hover { color: #f43f5e; }
+
+/* ================================================================
+   Lista de candidatos
+   ================================================================ */
+.candidates-list-wrapper {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  /* Altura controlada por JS (useLayoutEffect); transição suave */
+  height: 80px;
+  transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.empty-candidates {
+  padding: 36px 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  animation: candidateIn 0.2s ease forwards;
+}
+.empty-icon { opacity: 0.18; }
+
+.candidates-list {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+/* ----------------------------------------------------------------
+   Item da lista — animação de entrada escalonada
+   ---------------------------------------------------------------- */
+@keyframes candidateIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.candidate-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 13px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background var(--transition-fast);
+  /* Animação de entrada */
+  animation: candidateIn 0.18s ease both;
+}
+.candidate-item:last-child { border-bottom: none; }
+.candidate-item:hover { background: rgba(255, 255, 255, 0.025); }
+
+.candidate-item.exact-match {
+  border-left: 3px solid var(--accent-emerald);
+  background: rgba(16, 185, 129, 0.02);
+  padding-left: 15px;
+}
+.candidate-item.exact-match:hover { background: rgba(16, 185, 129, 0.04); }
+
+/* Info (flex: 1) */
+.candidate-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.candidate-top-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.candidate-desc {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.exact-pill {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--accent-emerald);
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: var(--radius-full);
+  padding: 1px 7px;
+  white-space: nowrap;
+}
+
+.candidate-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.meta-dot { color: rgba(255,255,255,0.12); }
+
+/* Direita: valor + score + botão */
+.candidate-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.candidate-amount-block {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.candidate-amount {
+  font-size: 0.92rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.candidate-amount.income { color: var(--accent-emerald); }
+.candidate-amount.expense { color: #f43f5e; }
+
+/* Badge de score inline */
+.score-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+.score-badge.score-high {
+  background: rgba(16, 185, 129, 0.14);
+  color: var(--accent-emerald);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+.score-badge.score-mid {
+  background: rgba(251, 191, 36, 0.1);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+.score-badge.score-low {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Botão vincular */
+.select-candidate-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: var(--radius-sm);
+  color: var(--accent-emerald);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+.select-candidate-btn:hover {
+  background: var(--accent-emerald);
+  color: #020617;
+  border-color: var(--accent-emerald);
+  box-shadow: 0 0 12px var(--accent-emerald-glow);
+}
+
+/* ================================================================
+   Responsivo
+   ================================================================ */
+@media (max-width: 580px) {
+  .reconcile-select-body { padding: 16px; }
+  .filter-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .filter-row-right { width: 100%; justify-content: flex-end; }
+  .candidate-item { flex-direction: column; align-items: stretch; gap: 10px; }
+  .candidate-right { flex-direction: row; justify-content: space-between; align-items: center; }
+  .candidate-amount-block { flex-direction: row; }
+}

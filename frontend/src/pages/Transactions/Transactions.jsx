@@ -10,6 +10,20 @@ import { TransactionFormDrawer } from '../../components/ui/TransactionFormDrawer
 import { ArrowUpRight, ArrowDownRight, Search, Filter, Plus, Check } from 'lucide-react';
 import './Transactions.css';
 import { CustomSelect } from '../../components/ui/CustomSelect';
+import { CustomDatePicker } from '../../components/ui/CustomDatePicker';
+
+// Helper helper to get start of current month and today's date in YYYY-MM-DD format
+const getInitialDates = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  
+  return {
+    start: `${year}-${month}-01`,
+    end: `${year}-${month}-${day}`
+  };
+};
 
 export function Transactions({ filterAccountId, setFilterAccountId }) {
   const { transactions, accounts, loans, hideValues, markTransactionAsPaid } = useFinance();
@@ -18,6 +32,15 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
   const [selectedTxForPayment, setSelectedTxForPayment] = useState(null);
   const [selectedTxForDetails, setSelectedTxForDetails] = useState(null);
   const [isAddingTransaction, setIsAddingTransaction] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(20);
+
+  const initialDates = getInitialDates();
+  const [startDate, setStartDate] = useState(initialDates.start);
+  const [endDate, setEndDate] = useState(initialDates.end);
+
+  useEffect(() => {
+    setVisibleCount(20);
+  }, [searchTerm, filterAccountId, activeTab, startDate, endDate]);
 
   const allRef = useRef(null);
   const payableRef = useRef(null);
@@ -61,17 +84,23 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
     setSelectedTxForPayment(transaction);
   };
 
-  const filteredTransactions = transactions.filter(tx => {
-    const matchesTab = activeTab === 'payable' ? (tx.type === 'expense' && tx.status === 'pending') :
-                       activeTab === 'receivable' ? (tx.type === 'income' && tx.status === 'pending') : true;
-    
-    const matchesAccount = filterAccountId === 'all' || tx.accountId === filterAccountId;
-    
-    const matchesSearch = tx.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          tx.category.toLowerCase().includes(searchTerm.toLowerCase());
-                          
-    return matchesTab && matchesAccount && matchesSearch;
-  });
+  const filteredTransactions = transactions
+    .filter(tx => {
+      const matchesTab = activeTab === 'payable' ? (tx.type === 'expense' && tx.status === 'pending') :
+                         activeTab === 'receivable' ? (tx.type === 'income' && tx.status === 'pending') : true;
+      
+      const matchesAccount = filterAccountId === 'all' || tx.accountId === filterAccountId;
+      
+      const matchesSearch = tx.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                            tx.category.toLowerCase().includes(searchTerm.toLowerCase());
+                            
+      const matchesDate = (!startDate || tx.date >= startDate) && (!endDate || tx.date <= endDate);
+                            
+      return matchesTab && matchesAccount && matchesSearch && matchesDate;
+    })
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  const displayedTransactions = filteredTransactions.slice(0, visibleCount);
 
   return (
     <div className="transactions-page">
@@ -141,22 +170,40 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
               onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
-          
-          <div className="account-select-wrapper">
-            <CustomSelect
-              className="account-filter-select-custom"
-              value={filterAccountId}
-              onChange={e => setFilterAccountId(e.target.value)}
-              options={[
-                { value: 'all', label: 'Todas as Contas' },
-                ...accounts.map(acc => ({ value: String(acc.id), label: acc.name }))
-              ]}
-            />
+
+          <div className="right-filters">
+            <div className="date-filter-group">
+              <CustomDatePicker
+                value={startDate}
+                onChange={e => setStartDate(e.target.value)}
+                placeholder="Data Inicial"
+                className="date-picker-custom"
+              />
+              <span className="date-separator">até</span>
+              <CustomDatePicker
+                value={endDate}
+                onChange={e => setEndDate(e.target.value)}
+                placeholder="Data Final"
+                className="date-picker-custom"
+              />
+            </div>
+            
+            <div className="account-select-wrapper">
+              <CustomSelect
+                className="account-filter-select-custom"
+                value={filterAccountId}
+                onChange={e => setFilterAccountId(e.target.value)}
+                options={[
+                  { value: 'all', label: 'Todas as Contas' },
+                  ...accounts.map(acc => ({ value: String(acc.id), label: acc.name }))
+                ]}
+              />
+            </div>
           </div>
         </div>
 
         <div className="transactions-table animate-fade-in" key={activeTab}>
-          {filteredTransactions.map(tx => (
+          {displayedTransactions.map(tx => (
              <div 
                key={tx.id} 
                className="transaction-item" 
@@ -212,6 +259,17 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
           ))}
           {filteredTransactions.length === 0 && (
             <div className="empty-state">Nenhuma transação encontrada nesta categoria.</div>
+          )}
+          {filteredTransactions.length > visibleCount && (
+            <div className="load-more-container">
+              <Button 
+                variant="secondary" 
+                onClick={() => setVisibleCount(prev => prev + 20)}
+                className="load-more-btn"
+              >
+                Carregar Mais
+              </Button>
+            </div>
           )}
         </div>
       </GlassCard>

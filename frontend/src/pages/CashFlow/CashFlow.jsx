@@ -1,12 +1,18 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useFinance } from '../../context/FinanceContext';
 import { TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, Calendar, DollarSign } from 'lucide-react';
+import { Button } from '../../components/ui/Button';
 import './CashFlow.css';
 
 export function CashFlow() {
   const { accounts, transactions, loans, hideValues } = useFinance();
   const [projectionDays, setProjectionDays] = useState(30); // 30, 60, 90 dias
   const [hoveredPoint, setHoveredPoint] = useState(null);
+  const [visibleEventsCount, setVisibleEventsCount] = useState(15);
+
+  useEffect(() => {
+    setVisibleEventsCount(15);
+  }, [projectionDays]);
 
   // 1. Saldo Inicial (consolidado de todas as contas ativas)
   const initialBalance = useMemo(() => {
@@ -167,7 +173,7 @@ export function CashFlow() {
 
   // 3. Gerar coordenadas para o gráfico SVG
   const chartPathData = useMemo(() => {
-    if (dailyPoints.length === 0) return { linePath: '', areaPath: '', points: [] };
+    if (dailyPoints.length === 0) return { linePath: '', areaPath: '', points: [], zeroPercent: 100 };
 
     const width = 800;
     const height = 250;
@@ -188,7 +194,9 @@ export function CashFlow() {
     const linePath = points.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
     const areaPath = `${linePath} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z`;
 
-    return { linePath, areaPath, points, height, width, padding, minBal, range };
+    const zeroPercent = (maxBal / range) * 100;
+
+    return { linePath, areaPath, points, height, width, padding, minBal, range, zeroPercent };
   }, [dailyPoints, initialBalance]);
 
   const formatCurrency = (value) => {
@@ -304,7 +312,16 @@ export function CashFlow() {
             <defs>
               <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#10b981" stopOpacity="0.25" />
-                <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                <stop offset={`${chartPathData.zeroPercent}%`} stopColor="#10b981" stopOpacity="0.0" />
+                <stop offset={`${chartPathData.zeroPercent}%`} stopColor="#ef4444" stopOpacity="0.0" />
+                <stop offset="100%" stopColor="#ef4444" stopOpacity="0.25" />
+              </linearGradient>
+
+              <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#10b981" />
+                <stop offset={`${chartPathData.zeroPercent}%`} stopColor="#10b981" />
+                <stop offset={`${chartPathData.zeroPercent}%`} stopColor="#ef4444" />
+                <stop offset="100%" stopColor="#ef4444" />
               </linearGradient>
             </defs>
 
@@ -323,7 +340,7 @@ export function CashFlow() {
             <path d={chartPathData.areaPath} fill="url(#areaGrad)" />
 
             {/* Linha da Curva */}
-            <path d={chartPathData.linePath} className="chart-line" />
+            <path d={chartPathData.linePath} className="chart-line" stroke="url(#lineGrad)" />
 
             {/* Pontos de Lançamentos */}
             {chartPathData.points.map((p, idx) => {
@@ -396,7 +413,8 @@ export function CashFlow() {
                 {/* Calcula saldo progressivamente para a listagem */}
                 {(() => {
                   let runningBalance = initialBalance;
-                  return events.map((ev) => {
+                  const displayedEvents = events.slice(0, visibleEventsCount);
+                  return displayedEvents.map((ev) => {
                     if (ev.type === 'income') {
                       runningBalance += ev.amount;
                     } else {
@@ -428,6 +446,17 @@ export function CashFlow() {
                 })()}
               </tbody>
             </table>
+            {events.length > visibleEventsCount && (
+              <div className="load-more-container">
+                <Button 
+                  variant="secondary" 
+                  onClick={() => setVisibleEventsCount(prev => prev + 15)}
+                  className="load-more-btn"
+                >
+                  Carregar Mais
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>

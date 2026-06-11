@@ -72,3 +72,20 @@
   cursor: not-allowed;
   background: rgba(255, 255, 255, 0.02);
 }
+
+/* Custom modal overrides to support date picker dropdowns and wider desktop display */
+.loan-form-modal-container {
+  max-width: 530px !important;
+  overflow: visible !important;
+}
+
+.loan-form-modal-body {
+  overflow: visible !important;
+}
+
+@media (max-width: 768px) {
+  .loan-form-modal-container {
+    max-width: 100% !important;
+    overflow-y: auto !important;
+  }
+}

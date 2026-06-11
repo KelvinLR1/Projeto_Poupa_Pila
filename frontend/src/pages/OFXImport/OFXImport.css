@@ -66,19 +66,21 @@
   align-items: center;
   gap: 8px;
   padding: 12px 24px;
-  background: var(--text-primary);
-  color: #000;
+  background: var(--accent-emerald);
+  color: #020617;
   font-weight: 600;
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--transition-fast);
   margin-top: 8px;
   font-size: 0.9rem;
+  box-shadow: 0 4px 14px var(--accent-emerald-glow);
 }
 
 .upload-btn:hover {
-  background: #fff;
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+  background: var(--accent-emerald);
+  filter: brightness(1.12);
+  box-shadow: 0 0 20px var(--accent-emerald-glow);
   transform: translateY(-2px);
 }
 
@@ -137,9 +139,12 @@
 
 .summary-card {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 16px;
-  padding: 20px 24px;
+  justify-content: center;
+  text-align: center;
+  gap: 12px;
+  padding: 24px;
 }
 
 .summary-card p {
@@ -167,6 +172,8 @@
   align-items: center;
   gap: 16px;
   padding: 20px 24px;
+  overflow: visible !important;
+  z-index: 10 !important;
 }
 
 .account-selector-card label {
@@ -194,6 +201,7 @@
 /* OFX Transaction List */
 .ofx-tx-list-card {
   padding: 0;
+  z-index: 1;
 }
 
 .ofx-list-header {
@@ -220,21 +228,38 @@
 
 .link-btn:hover { opacity: 0.7; }
 
-.ofx-tx-item {
-  display: flex;
-  align-items: center;
-  padding: 14px 24px;
+.ofx-tx-item-wrapper {
   border-bottom: 1px solid var(--border-color);
-  cursor: pointer;
   transition: background var(--transition-fast);
-  gap: 12px;
+  display: flex;
+  flex-direction: column;
   animation: slideUp 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.ofx-tx-item:last-child { border-bottom: none; }
-.ofx-tx-item:hover { background: rgba(255, 255, 255, 0.025); }
-.ofx-tx-item.unselected { opacity: 0.4; }
-.ofx-tx-item.is-duplicate { opacity: 0.6; }
+.ofx-tx-item-wrapper:last-child {
+  border-bottom: none;
+}
+
+.ofx-tx-item {
+  display: flex;
+  align-items: center;
+  padding: 14px 24px 8px 24px;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  gap: 12px;
+}
+
+.ofx-tx-item-wrapper:hover {
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.ofx-tx-item-wrapper.unselected {
+  opacity: 0.45;
+}
+
+.ofx-tx-item.is-duplicate {
+  opacity: 0.85;
+}
 
 .ofx-tx-checkbox {
   width: 20px;
@@ -249,9 +274,105 @@
   color: var(--accent-emerald);
 }
 
-.ofx-tx-item.selected .ofx-tx-checkbox {
+.ofx-tx-item-wrapper.selected .ofx-tx-checkbox {
   background: var(--accent-emerald-light);
   border-color: var(--accent-emerald);
+}
+
+/* Rodapé de conciliação */
+.reconciliation-info {
+  padding: 0 24px 14px 78px;
+  display: flex;
+  flex-direction: column;
+  font-size: 0.82rem;
+  transition: all var(--transition-fast) ease;
+}
+
+.rec-matched-container,
+.rec-unmatched-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+}
+
+.rec-matched-container {
+  border-left: 3px solid var(--accent-gold);
+}
+
+.rec-unmatched-container {
+  border-left: 3px solid rgba(255, 255, 255, 0.15);
+}
+
+.rec-match-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.rec-label {
+  font-weight: 700;
+  color: var(--accent-gold);
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+}
+
+.rec-text-desc {
+  color: var(--text-secondary);
+}
+
+.rec-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.rec-actions .divider {
+  color: rgba(255, 255, 255, 0.15);
+}
+
+.rec-action-btn {
+  background: none;
+  border: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.rec-action-btn.change-btn {
+  color: var(--accent-emerald);
+}
+
+.rec-action-btn.change-btn:hover {
+  text-shadow: 0 0 8px var(--accent-emerald-glow);
+  opacity: 0.85;
+}
+
+.rec-action-btn.unlink-btn {
+  color: var(--accent-coral);
+}
+
+.rec-action-btn.unlink-btn:hover {
+  text-shadow: 0 0 8px var(--accent-coral-glow);
+  opacity: 0.85;
+}
+
+.rec-action-btn.link-btn-text {
+  color: var(--accent-emerald);
+  align-self: flex-start;
+}
+
+.rec-action-btn.link-btn-text:hover {
+  text-shadow: 0 0 8px var(--accent-emerald-glow);
+  opacity: 0.85;
 }
 
 /* Import Actions */
