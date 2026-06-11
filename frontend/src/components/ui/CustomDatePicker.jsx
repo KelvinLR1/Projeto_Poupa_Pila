@@ -32,6 +32,7 @@ export function CustomDatePicker({ value, onChange, placeholder = 'Selecione uma
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
   const [openUpward, setOpenUpward] = useState(false);
+  const [openLeft, setOpenLeft] = useState(false);
 
   const selectedDate = parseDate(value);
   const [currentMonth, setCurrentMonth] = useState(selectedDate.getMonth());
@@ -67,11 +68,22 @@ export function CustomDatePicker({ value, onChange, placeholder = 'Selecione uma
     if (!isOpen && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceRight = window.innerWidth - rect.right;
+      
       // Se tiver menos de 320px de espaço abaixo, e tiver espaço acima, abre pra cima
       if (spaceBelow < 320 && rect.top > 320) {
         setOpenUpward(true);
       } else {
         setOpenUpward(false);
+      }
+
+      // Se tiver no lado direito da tela ou pouco espaço à direita, alinha à direita
+      const triggerCenter = rect.left + rect.width / 2;
+      const viewportCenter = window.innerWidth / 2;
+      if (triggerCenter > viewportCenter || spaceRight < 290) {
+        setOpenLeft(true);
+      } else {
+        setOpenLeft(false);
       }
     }
     setIsOpen(prev => !prev);
@@ -147,7 +159,7 @@ export function CustomDatePicker({ value, onChange, placeholder = 'Selecione uma
   const today = new Date();
 
   return (
-    <div className={`custom-datepicker-container ${className} ${isOpen ? 'is-open' : ''} ${disabled ? 'disabled' : ''} ${openUpward ? 'open-upward' : ''}`} ref={containerRef}>
+    <div className={`custom-datepicker-container ${className} ${isOpen ? 'is-open' : ''} ${disabled ? 'disabled' : ''} ${openUpward ? 'open-upward' : ''} ${openLeft ? 'open-left' : ''}`} ref={containerRef}>
       <div className="custom-datepicker-trigger" onClick={handleTriggerClick}>
         <span className={value ? 'has-value' : 'placeholder'}>
           {value ? formatDisplayDate(value) : placeholder}

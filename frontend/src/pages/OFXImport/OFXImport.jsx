@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useFinance } from '../../context/FinanceContext';
 import { parseOFX } from '../../utils/parseOFX';
 import { formatCurrency, formatDate } from '../../utils/formatters';
@@ -32,6 +32,35 @@ export function OFXImport() {
   const [error, setError] = useState(null);
   const [manualLinks, setManualLinks] = useState({}); // fitId -> sysTx.id ou null (caso explicitamente desvinculado)
   const [selectingFitId, setSelectingFitId] = useState(null);
+  const [txCategories, setTxCategories] = useState({}); // fitId -> categoria personalizada
+
+  // Preenche categorias sugeridas com base no histórico
+  useEffect(() => {
+    if (!parsed || !parsed.transactions) return;
+
+    const suggested = { ...txCategories };
+    let changed = false;
+
+    parsed.transactions.forEach(tx => {
+      if (!suggested[tx.fitId]) {
+        // Tenta encontrar uma transação antiga com descrição similar
+        const similarTx = transactions.find(sysTx => 
+          similarity(sysTx.description, tx.description) >= 0.7
+        );
+        
+        if (similarTx) {
+          suggested[tx.fitId] = similarTx.category;
+        } else {
+          suggested[tx.fitId] = tx.type === 'income' ? 'Receita' : 'Despesa';
+        }
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      setTxCategories(suggested);
+    }
+  }, [parsed, transactions]);
 
   // Processa o arquivo OFX
   const processFile = useCallback((file) => {
@@ -109,11 +138,12 @@ export function OFXImport() {
         // Se já está paga, apenas ignora para não criar duplicado
       } else {
         // Sem correspondência: adiciona como nova transação paga
+        const cat = txCategories[tx.fitId] || (tx.type === 'income' ? 'Receita' : 'Despesa');
         await addTransaction({
           accountId: accountId,
           type: tx.type,
           amount: tx.amount,
-          category: tx.type === 'income' ? 'Receita OFX' : 'Despesa OFX',
+          category: cat,
           description: tx.description,
           date: tx.date,
           status: 'paid', // Transações consolidadas do extrato já são pagas
@@ -133,6 +163,7 @@ export function OFXImport() {
     setSelectedTx({});
     setManualLinks({});
     setSelectingFitId(null);
+    setTxCategories({});
   };
 
   const toggleSelect = (fitId) => {
@@ -323,9 +354,26 @@ export function OFXImport() {
                       </div>
                     ) : (
                       <div className="rec-unmatched-container">
-                        <span className="rec-text-desc text-muted">
-                          Sem correspondência (será importada como nova transação quitada)
-                        </span>
+                        <div className="unmatched-row">
+                          <span className="rec-text-desc text-muted">
+                            Sem correspondência (será importada como nova transação)
+                          </span>
+                          <div className="ofx-category-select-wrapper">
+                            <span className="ofx-category-label">Categoria:</span>
+                            <input
+                              type="text"
+                              list="existing-categories"
+                              className="ofx-category-input"
+                              value={txCategories[tx.fitId] || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setTxCategories(prev => ({ ...prev, [tx.fitId]: val }));
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              placeholder="Selecione ou digite..."
+                            />
+                          </div>
+                        </div>
                         <div className="rec-actions">
                           <button
                             type="button"
@@ -386,6 +434,12 @@ export function OFXImport() {
           onClose={() => setSelectingFitId(null)}
         />
       )}
+
+      <datalist id="existing-categories">
+        {Array.from(new Set(transactions.map(t => t.category).filter(Boolean))).map(cat => (
+          <option key={cat} value={cat} />
+        ))}
+      </datalist>
     </div>
   );
 }

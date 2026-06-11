@@ -164,6 +164,9 @@
   background: rgba(255,255,255,0.12);
   color: var(--text-primary);
 }
+.search-clear-btn:active {
+  transform: translateY(-50%) scale(0.96) !important;
+}
 
 .search-highlight {
   background: rgba(16, 185, 129, 0.2);
@@ -179,7 +182,7 @@
 .filter-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 12px;
   flex-wrap: nowrap;
 }
 
@@ -196,7 +199,7 @@
   flex-shrink: 0;
 }
 .filter-select-sm .custom-select-trigger {
-  padding: 5px 10px !important;
+  padding: 6px 12px !important;
   font-size: 0.78rem !important;
   border-radius: var(--radius-full) !important;
   min-height: 0 !important;
@@ -216,7 +219,7 @@
 
 /* Toggle chip */
 .filter-toggle {
-  padding: 5px 12px;
+  padding: 6px 14px;
   border-radius: var(--radius-full);
   border: 1px solid var(--border-color);
   background: transparent;
@@ -246,7 +249,7 @@
   flex-shrink: 0;
 }
 .filter-datepicker .custom-datepicker-trigger {
-  padding: 5px 10px !important;
+  padding: 6px 12px !important;
   font-size: 0.78rem !important;
   border-radius: var(--radius-full) !important;
   min-height: 0 !important;
@@ -493,6 +496,7 @@
 @media (max-width: 580px) {
   .reconcile-select-body { padding: 16px; }
   .filter-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .filter-sep { display: none; }
   .filter-row-right { width: 100%; justify-content: flex-end; }
   .candidate-item { flex-direction: column; align-items: stretch; gap: 10px; }
   .candidate-right { flex-direction: row; justify-content: space-between; align-items: center; }

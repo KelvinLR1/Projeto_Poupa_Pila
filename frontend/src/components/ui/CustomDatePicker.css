@@ -64,6 +64,11 @@
   box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.7);
 }
 
+.custom-datepicker-container.open-left .custom-datepicker-calendar {
+  left: auto;
+  right: 0;
+}
+
 .calendar-header {
   display: flex;
   align-items: center;

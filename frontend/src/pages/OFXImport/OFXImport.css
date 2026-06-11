@@ -291,12 +291,14 @@
 .rec-matched-container,
 .rec-unmatched-container {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.04);
-  border-radius: var(--radius-sm);
-  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
 }
 
 .rec-matched-container {
@@ -329,8 +331,8 @@
 .rec-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 2px;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
 .rec-actions .divider {
@@ -459,6 +461,87 @@
   .import-actions .btn {
     width: 100% !important;
     justify-content: center;
+  }
+}
+
+/* Novo layout para categorias de transações importadas */
+.unmatched-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.ofx-category-select-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ofx-category-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ofx-category-input {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  outline: none;
+  transition: all var(--transition-fast);
+  width: 180px;
+  box-sizing: border-box;
+}
+
+.ofx-category-input:focus {
+  border-color: var(--accent-emerald);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
+}
+
+@media (max-width: 860px) {
+  .rec-matched-container,
+  .rec-unmatched-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+  }
+  .unmatched-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    width: 100%;
+  }
+  .rec-actions {
+    width: 100%;
+    justify-content: flex-end;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    padding-top: 8px;
+  }
+}
+
+@media (max-width: 640px) {
+  .reconciliation-info {
+    padding: 0 16px 14px 16px;
+  }
+  .ofx-category-select-wrapper {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .ofx-category-input {
+    flex: 1;
+    min-width: 120px;
+    width: 100%;
   }
 }
 

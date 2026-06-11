@@ -116,6 +116,11 @@
   color: var(--accent-emerald);
 }
 
+.vault-pw-toggle:active,
+.vault-pw-generate:active {
+  transform: translateY(-50%) scale(0.96) !important;
+}
+
 .vault-textarea {
   resize: vertical;
   min-height: 80px;
