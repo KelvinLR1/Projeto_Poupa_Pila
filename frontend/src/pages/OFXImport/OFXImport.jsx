@@ -11,7 +11,8 @@ import {
 } from 'lucide-react';
 import './OFXImport.css';
 import { CustomSelect } from '../../components/ui/CustomSelect';
-import { ReconcileSelectModal } from '../../components/ui/ReconcileSelectModal';
+import { ReconcileSelectModal, getRemainingAmount } from '../../components/ui/ReconcileSelectModal';
+import { SplitTransactionModal } from '../../components/ui/SplitTransactionModal';
 
 // Calcula a similaridade entre dois textos (para conciliação)
 function similarity(a = '', b = '') {
@@ -32,6 +33,7 @@ export function OFXImport() {
   const [error, setError] = useState(null);
   const [manualLinks, setManualLinks] = useState({}); // fitId -> sysTx.id ou null (caso explicitamente desvinculado)
   const [selectingFitId, setSelectingFitId] = useState(null);
+  const [splittingFitId, setSplittingFitId] = useState(null);
   const [txCategories, setTxCategories] = useState({}); // fitId -> categoria personalizada
 
   // Preenche categorias sugeridas com base no histórico
@@ -62,6 +64,24 @@ export function OFXImport() {
     }
   }, [parsed, transactions]);
 
+  const processOFXText = useCallback((text) => {
+    try {
+      const result = parseOFX(text);
+      if (result.transactions.length === 0) {
+        setError('Nenhuma transação encontrada no arquivo.');
+        return;
+      }
+      // Pré-seleciona todas as transações para importar
+      const initial = {};
+      result.transactions.forEach(tx => { initial[tx.fitId] = true; });
+      setSelectedTx(initial);
+      setParsed(result);
+      setStep('review');
+    } catch (err) {
+      setError(`Erro ao processar arquivo: ${err.message}`);
+    }
+  }, []);
+
   // Processa o arquivo OFX
   const processFile = useCallback((file) => {
     if (!file || !file.name.match(/\.(ofx|OFX)$/i)) {
@@ -71,24 +91,10 @@ export function OFXImport() {
     setError(null);
     const reader = new FileReader();
     reader.onload = (e) => {
-      try {
-        const result = parseOFX(e.target.result);
-        if (result.transactions.length === 0) {
-          setError('Nenhuma transação encontrada no arquivo.');
-          return;
-        }
-        // Pré-seleciona todas as transações para importar
-        const initial = {};
-        result.transactions.forEach(tx => { initial[tx.fitId] = true; });
-        setSelectedTx(initial);
-        setParsed(result);
-        setStep('review');
-      } catch (err) {
-        setError(`Erro ao processar arquivo: ${err.message}`);
-      }
+      processOFXText(e.target.result);
     };
     reader.readAsText(file, 'ISO-8859-1'); // Bancos brasileiros usam Latin-1
-  }, []);
+  }, [processOFXText]);
 
   // Drag and Drop
   const onDrop = useCallback((e) => {
@@ -114,14 +120,47 @@ export function OFXImport() {
     );
   }, [transactions]);
 
-  // Retorna o vínculo ativo da transação OFX (seja automático ou configurado manualmente)
-  const getActiveMatch = useCallback((tx) => {
-    if (manualLinks[tx.fitId] === null) return null; // Usuário desvinculou explicitamente
-    if (manualLinks[tx.fitId]) {
-      return transactions.find(t => t.id === manualLinks[tx.fitId]);
+  // Retorna TODOS os vínculos ativos (suporte a multi-conciliação)
+  const getActiveMatches = useCallback((tx) => {
+    if (manualLinks[tx.fitId] === null) return [];
+    const link = manualLinks[tx.fitId];
+    
+    if (link) {
+      const linksArray = Array.isArray(link) ? link : [link];
+      return linksArray.map(item => {
+        const id = typeof item === 'string' ? item : item.id;
+        const reconciledAmount = (typeof item === 'object' && item !== null && 'reconciledAmount' in item)
+          ? item.reconciledAmount 
+          : null;
+        const found = transactions.find(t => t.id === id);
+        if (!found) return null;
+        
+        let finalAmt = reconciledAmount;
+        if (finalAmt === null) {
+          finalAmt = getRemainingAmount(found);
+        }
+        return {
+          transaction: found,
+          reconciledAmount: finalAmt
+        };
+      }).filter(Boolean);
     }
-    return findMatch(tx);
+
+    const auto = findMatch(tx);
+    if (auto) {
+      return [{
+        transaction: auto,
+        reconciledAmount: getRemainingAmount(auto)
+      }];
+    }
+    return [];
   }, [manualLinks, transactions, findMatch]);
+
+  // Retorna o primeiro vínculo ativo (para checagem de "tem correspondência")
+  const getActiveMatch = useCallback((tx) => {
+    const matches = getActiveMatches(tx);
+    return matches.length > 0 ? matches[0].transaction : null;
+  }, [getActiveMatches]);
 
   // Importa as transações selecionadas
   const handleImport = async () => {
@@ -129,26 +168,64 @@ export function OFXImport() {
     let importedCount = 0;
 
     for (const tx of toImport) {
-      const match = getActiveMatch(tx);
-      if (match) {
-        // Se já existe e está como pendente no sistema, quita/marca como paga
-        if (match.status === 'pending') {
-          await markTransactionAsPaid(match.id);
+      const manualLink = manualLinks[tx.fitId];
+      
+      if (manualLink && manualLink.isNewSplit) {
+        // Importa desmembrado em múltiplas novas transações
+        for (const split of manualLink.splits) {
+          await addTransaction({
+            accountId: accountId,
+            type: tx.type,
+            amount: split.amount,
+            category: split.category,
+            description: split.description,
+            date: tx.date,
+            status: 'paid',
+          });
         }
-        // Se já está paga, apenas ignora para não criar duplicado
-      } else {
-        // Sem correspondência: adiciona como nova transação paga
-        const cat = txCategories[tx.fitId] || (tx.type === 'income' ? 'Receita' : 'Despesa');
-        await addTransaction({
-          accountId: accountId,
-          type: tx.type,
-          amount: tx.amount,
-          category: cat,
-          description: tx.description,
-          date: tx.date,
-          status: 'paid', // Transações consolidadas do extrato já são pagas
-        });
         importedCount++;
+      } else {
+        const matches = getActiveMatches(tx);
+        if (matches.length > 0) {
+          // Marca todos os lançamentos vinculados (1 ou N) como pagos (com o valor parcial se aplicável)
+          let totalMatchedAmount = 0;
+          for (const { transaction, reconciledAmount } of matches) {
+            if (transaction.status !== 'paid') {
+              await markTransactionAsPaid(transaction.id, reconciledAmount);
+            }
+            totalMatchedAmount += reconciledAmount;
+          }
+
+          // Se a soma dos vínculos for menor que o valor do extrato (sobra de valor no extrato)
+          const difference = tx.amount - totalMatchedAmount;
+          if (difference > 0.01) {
+            // Cria um lançamento residual automático para a diferença
+            const cat = txCategories[tx.fitId] || (tx.type === 'income' ? 'Receita' : 'Despesa');
+            await addTransaction({
+              accountId: accountId,
+              type: tx.type,
+              amount: difference,
+              category: cat,
+              description: `${tx.description} (Resíduo de Conciliação)`,
+              date: tx.date,
+              status: 'paid',
+            });
+          }
+          importedCount++;
+        } else {
+          // Sem correspondência: adiciona como nova transação paga
+          const cat = txCategories[tx.fitId] || (tx.type === 'income' ? 'Receita' : 'Despesa');
+          await addTransaction({
+            accountId: accountId,
+            type: tx.type,
+            amount: tx.amount,
+            category: cat,
+            description: tx.description,
+            date: tx.date,
+            status: 'paid',
+          });
+          importedCount++;
+        }
       }
     }
 
@@ -283,7 +360,12 @@ export function OFXImport() {
 
             {parsed.transactions.map((tx) => {
               const activeMatch = getActiveMatch(tx);
+              const activeMatches = getActiveMatches(tx);
+              const isMultiLink = activeMatches.length > 1;
               const isSelected = !!selectedTx[tx.fitId];
+              
+              const manualLink = manualLinks[tx.fitId];
+              const isNewSplit = manualLink && manualLink.isNewSplit;
 
               return (
                 <div
@@ -311,7 +393,11 @@ export function OFXImport() {
                       <span className={`tx-amount ${tx.type === 'income' ? 'text-emerald' : ''}`}>
                         {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}
                       </span>
-                      {activeMatch
+                      {isNewSplit
+                        ? <Badge variant="warning">Desmembrado</Badge>
+                        : isMultiLink
+                        ? <Badge variant="warning">{activeMatches.length} vínculos</Badge>
+                        : activeMatch
                         ? <Badge variant="warning">Já existe</Badge>
                         : <Badge variant="success">Nova</Badge>
                       }
@@ -320,22 +406,74 @@ export function OFXImport() {
 
                   {/* Informações de Conciliação */}
                   <div className="reconciliation-info">
-                    {activeMatch ? (
-                      <div className="rec-matched-container">
+                    {isNewSplit ? (
+                      // Desmembrado em múltiplas categorias
+                      <div className="rec-matched-container rec-split-container">
                         <div className="rec-match-details">
-                          <span className="rec-label">Correspondência:</span>
-                          <span className="rec-text-desc">
-                            {activeMatch.description || 'Sem descrição'} ({formatDate(activeMatch.date)}) — {formatCurrency(activeMatch.amount)} ({accounts.find(a => a.id === activeMatch.accountId)?.name || 'Conta desconhecida'})
-                          </span>
+                          <span className="rec-label rec-label-split">Lançamento Desmembrado ({manualLink.splits.length} partes):</span>
+                          <div className="rec-split-list">
+                            {manualLink.splits.map((split, i) => (
+                              <span key={i} className="rec-split-item">
+                                <span className="rec-split-item-cat">[{split.category}]</span>{' '}
+                                <span className="rec-split-item-desc">{split.description}</span>{' '}
+                                <span className="rec-split-item-amount">{formatCurrency(split.amount)}</span>
+                              </span>
+                            ))}
+                          </div>
                         </div>
                         <div className="rec-actions">
                           <button
                             type="button"
                             className="rec-action-btn change-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectingFitId(tx.fitId);
-                            }}
+                            onClick={(e) => { e.stopPropagation(); setSplittingFitId(tx.fitId); }}
+                          >
+                            Alterar divisão
+                          </button>
+                          <span className="divider">|</span>
+                          <button
+                            type="button"
+                            className="rec-action-btn unlink-btn"
+                            onClick={(e) => { e.stopPropagation(); setManualLinks(prev => ({ ...prev, [tx.fitId]: null })); }}
+                          >
+                            Desvincular
+                          </button>
+                        </div>
+                      </div>
+                    ) : isMultiLink ? (
+                      // Multi-vínculo: N lançamentos vinculados
+                      <div className="rec-matched-container rec-multi-container">
+                        <div className="rec-match-details">
+                          <span className="rec-label rec-label-multi">Multi-vínculo ({activeMatches.length} lançamentos):</span>
+                          <div className="rec-multi-list">
+                            {activeMatches.map(({ transaction: m, reconciledAmount }) => (
+                              <span key={m.id} className="rec-multi-item">
+                                <span className="rec-multi-item-desc">{m.description || 'Sem descrição'}</span>
+                                <span className="rec-multi-item-amount">
+                                  {reconciledAmount < m.amount ? (
+                                    <>
+                                      <span className="partial-badge">Parcial</span> {formatCurrency(reconciledAmount)} <span className="total-val">de {formatCurrency(m.amount)}</span>
+                                    </>
+                                  ) : (
+                                    formatCurrency(m.amount)
+                                  )}
+                                </span>
+                              </span>
+                            ))}
+                            <span className="rec-multi-total">
+                              Soma: {formatCurrency(activeMatches.reduce((s, item) => s + item.reconciledAmount, 0))}
+                              {tx.amount - activeMatches.reduce((s, item) => s + item.reconciledAmount, 0) > 0.01 && (
+                                <span className="rec-multi-residual-warning">
+                                  (Resíduo de {formatCurrency(tx.amount - activeMatches.reduce((s, item) => s + item.reconciledAmount, 0))} será criado como lançamento pago)
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="rec-actions">
+                          <button
+                            type="button"
+                            className="rec-action-btn change-btn"
+                            onClick={(e) => { e.stopPropagation(); setSelectingFitId(tx.fitId); }}
                           >
                             Alterar vínculo
                           </button>
@@ -343,16 +481,59 @@ export function OFXImport() {
                           <button
                             type="button"
                             className="rec-action-btn unlink-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setManualLinks(prev => ({ ...prev, [tx.fitId]: null }));
-                            }}
+                            onClick={(e) => { e.stopPropagation(); setManualLinks(prev => ({ ...prev, [tx.fitId]: null })); }}
+                          >
+                            Desvincular
+                          </button>
+                        </div>
+                      </div>
+                    ) : activeMatch ? (
+                      // Vínculo único
+                      <div className="rec-matched-container">
+                        <div className="rec-match-details">
+                          <span className="rec-label">Correspondência:</span>
+                          <span className="rec-text-desc">
+                            {activeMatch.description || 'Sem descrição'} ({formatDate(activeMatch.date)}) —{' '}
+                            {(() => {
+                              const matchObj = activeMatches[0];
+                              const recAmt = matchObj ? matchObj.reconciledAmount : activeMatch.amount;
+                              if (recAmt < activeMatch.amount) {
+                                return (
+                                  <>
+                                    <span className="partial-badge">Parcial</span> <strong>{formatCurrency(recAmt)}</strong> <span className="total-val">de {formatCurrency(activeMatch.amount)}</span>
+                                  </>
+                                );
+                              }
+                              return <strong>{formatCurrency(activeMatch.amount)}</strong>;
+                            })()}{' '}
+                            ({accounts.find(a => a.id === activeMatch.accountId)?.name || 'Conta desconhecida'})
+                          </span>
+                          {tx.amount - activeMatches.reduce((s, item) => s + item.reconciledAmount, 0) > 0.01 && (
+                            <span className="rec-multi-residual-warning" style={{ display: 'block', width: '100%', marginTop: '4px' }}>
+                              (Resíduo de {formatCurrency(tx.amount - activeMatches.reduce((s, item) => s + item.reconciledAmount, 0))} será criado como lançamento pago)
+                            </span>
+                          )}
+                        </div>
+                        <div className="rec-actions">
+                          <button
+                            type="button"
+                            className="rec-action-btn change-btn"
+                            onClick={(e) => { e.stopPropagation(); setSelectingFitId(tx.fitId); }}
+                          >
+                            Alterar vínculo
+                          </button>
+                          <span className="divider">|</span>
+                          <button
+                            type="button"
+                            className="rec-action-btn unlink-btn"
+                            onClick={(e) => { e.stopPropagation(); setManualLinks(prev => ({ ...prev, [tx.fitId]: null })); }}
                           >
                             Desvincular (Importar como nova)
                           </button>
                         </div>
                       </div>
                     ) : (
+                      // Sem correspondência
                       <div className="rec-unmatched-container">
                         <div className="unmatched-row">
                           <span className="rec-text-desc text-muted">
@@ -378,12 +559,17 @@ export function OFXImport() {
                           <button
                             type="button"
                             className="rec-action-btn link-btn-text"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectingFitId(tx.fitId);
-                            }}
+                            onClick={(e) => { e.stopPropagation(); setSelectingFitId(tx.fitId); }}
                           >
                             Vincular a lançamento existente
+                          </button>
+                          <span className="divider">|</span>
+                          <button
+                            type="button"
+                            className="rec-action-btn link-btn-text text-purple"
+                            onClick={(e) => { e.stopPropagation(); setSplittingFitId(tx.fitId); }}
+                          >
+                            Dividir em categorias
                           </button>
                         </div>
                       </div>
@@ -427,11 +613,41 @@ export function OFXImport() {
           ofxTx={parsed.transactions.find(t => t.fitId === selectingFitId)}
           transactions={transactions}
           accounts={accounts}
-          onSelect={(sysTx) => {
-            setManualLinks(prev => ({ ...prev, [selectingFitId]: sysTx.id }));
+          onSelect={(sysTxOrArray) => {
+            if (Array.isArray(sysTxOrArray)) {
+              // Multi-vínculo: salva array de objetos { id, reconciledAmount }
+              setManualLinks(prev => ({
+                ...prev,
+                [selectingFitId]: sysTxOrArray.map(item => ({
+                  id: item.transaction.id,
+                  reconciledAmount: item.reconciledAmount
+                }))
+              }));
+            } else {
+              // Vínculo único
+              setManualLinks(prev => ({ ...prev, [selectingFitId]: sysTxOrArray.id }));
+            }
             setSelectingFitId(null);
           }}
           onClose={() => setSelectingFitId(null)}
+        />
+      )}
+
+      {splittingFitId && (
+        <SplitTransactionModal
+          ofxTx={parsed.transactions.find(t => t.fitId === splittingFitId)}
+          transactions={transactions}
+          onConfirm={(splits) => {
+            setManualLinks(prev => ({
+              ...prev,
+              [splittingFitId]: {
+                isNewSplit: true,
+                splits: splits
+              }
+            }));
+            setSplittingFitId(null);
+          }}
+          onClose={() => setSplittingFitId(null)}
         />
       )}
 

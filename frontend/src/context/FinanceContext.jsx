@@ -212,6 +212,25 @@ export function FinanceProvider({ children }) {
     return null;
   };
 
+  const deleteSettlement = async (settlementId) => {
+    try {
+      const res = await fetch(`/api/finance/settlements/${settlementId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        await fetchFinanceData();
+        return data;
+      }
+    } catch (e) {
+      console.error('Erro ao excluir quitação:', e);
+    }
+    return null;
+  };
+
   return (
     <FinanceContext.Provider value={{
       accounts,
@@ -228,7 +247,8 @@ export function FinanceProvider({ children }) {
       addLoan,
       payLoan,
       toggleLoanType,
-      deleteLoanHistoryItem
+      deleteLoanHistoryItem,
+      deleteSettlement
     }}>
       {children}
     </FinanceContext.Provider>

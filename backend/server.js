@@ -906,6 +906,60 @@ app.delete('/api/finance/loans/history/:historyId', authenticate, (req, res) => 
   }
 });
 
+app.delete('/api/finance/settlements/:settlementId', authenticate, (req, res) => {
+  const { settlementId } = req.params;
+  try {
+    db.exec('BEGIN TRANSACTION');
+
+    // Busca o settlement
+    const selectSettlement = db.prepare('SELECT * FROM settlements WHERE id = ?');
+    const settlement = selectSettlement.all(settlementId)[0];
+    if (!settlement) {
+      db.exec('ROLLBACK');
+      return res.status(404).json({ error: 'Quitação não encontrada.' });
+    }
+
+    // Busca a transação associada para validar permissão
+    const selectTx = db.prepare('SELECT * FROM transactions WHERE id = ? AND user_id = ?');
+    const tx = selectTx.all(settlement.transaction_id, req.user.id)[0];
+    if (!tx) {
+      db.exec('ROLLBACK');
+      return res.status(403).json({ error: 'Acesso negado.' });
+    }
+
+    // Exclui o settlement
+    const deleteSettlement = db.prepare('DELETE FROM settlements WHERE id = ?');
+    deleteSettlement.run(settlementId);
+
+    // Reverte o saldo da conta
+    const amountChange = tx.type === 'income' ? -settlement.amount : settlement.amount;
+    const updateBalance = db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ?');
+    updateBalance.run(amountChange, settlement.accountId, req.user.id);
+
+    // Recalcula o status da transação
+    const remainingSettlements = db.prepare('SELECT amount FROM settlements WHERE transaction_id = ?').all(tx.id);
+    const newTotalPaid = remainingSettlements.reduce((sum, s) => sum + s.amount, 0);
+
+    let newStatus = 'pending';
+    if (newTotalPaid > 0) {
+      newStatus = Math.abs(tx.amount - newTotalPaid) < 0.01 ? 'paid' : 'partial';
+    }
+
+    const updateTxStatus = db.prepare('UPDATE transactions SET status = ? WHERE id = ?');
+    updateTxStatus.run(newStatus, tx.id);
+
+    db.exec('COMMIT');
+
+    // Retorna a lista atualizada de settlements e o novo status
+    const updatedSettlements = db.prepare('SELECT id, date, amount, accountId FROM settlements WHERE transaction_id = ?').all(tx.id);
+    res.json({ success: true, status: newStatus, settlements: updatedSettlements });
+  } catch (error) {
+    db.exec('ROLLBACK');
+    console.error('Erro ao excluir quitação:', error);
+    res.status(500).json({ error: 'Erro ao excluir quitação.' });
+  }
+});
+
 
 // ─── Rotas do Cofre de Senhas ───
 

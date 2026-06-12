@@ -3,16 +3,20 @@ import { createPortal } from 'react-dom';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { Button } from './Button';
 import { Badge } from './Badge';
-import { X, Calendar, ArrowUpRight, ArrowDownRight, Activity, Check } from 'lucide-react';
+import { X, Calendar, ArrowUpRight, ArrowDownRight, Activity, Check, Trash2, AlertTriangle } from 'lucide-react';
 import './PaymentModal.css';
 import './TransactionDetailsModal.css';
 
-export function TransactionDetailsModal({ transaction, onCancel, onPayRemaining }) {
+export function TransactionDetailsModal({ transaction, onCancel, onPayRemaining, onDeleteSettlement }) {
   const [isClosing, setIsClosing] = React.useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = React.useState(null);
+  const [removingId, setRemovingId] = React.useState(null);
 
   React.useEffect(() => {
     if (transaction) {
       setIsClosing(false);
+      setConfirmDeleteId(null);
+      setRemovingId(null);
     }
   }, [transaction]);
 
@@ -23,6 +27,18 @@ export function TransactionDetailsModal({ transaction, onCancel, onPayRemaining 
     setTimeout(() => {
       onCancel();
     }, 180);
+  };
+
+  const handleDeleteSettlement = async (settlementId) => {
+    setConfirmDeleteId(null);
+    setRemovingId(settlementId);
+    // Aguarda a animação de saída antes de chamar o backend
+    setTimeout(async () => {
+      if (onDeleteSettlement) {
+        await onDeleteSettlement(transaction.id, settlementId);
+      }
+      setRemovingId(null);
+    }, 340);
   };
 
   const settlements = transaction.settlements || [];
@@ -85,7 +101,7 @@ export function TransactionDetailsModal({ transaction, onCancel, onPayRemaining 
             </div>
           </div>
 
-          {/* Barra de progresso (só se não for totalmente pago ou se tiver histórico) */}
+          {/* Barra de progresso */}
           {(settlements.length > 0 || !isPaid) && (
             <div className="tx-progress-block">
               <div className="tx-progress-header">
@@ -119,18 +135,66 @@ export function TransactionDetailsModal({ transaction, onCancel, onPayRemaining 
             ) : (
               <div className="tx-timeline">
                 {settlements.map((s, idx) => (
-                  <div key={s.id} className="tx-timeline-item">
-                    <div className={`tx-timeline-dot ${idx === settlements.length - 1 ? 'dot-active' : ''}`} />
-                    <div className="tx-timeline-content">
-                      <div className="tx-timeline-row">
-                        <strong>Baixa {idx + 1}</strong>
-                        <span className="tx-timeline-amt">{formatCurrency(s.amount)}</span>
+                  <div key={s.id} className={`tx-timeline-slot${removingId === s.id ? ' removing' : ''}`}>
+                    <div className="tx-timeline-slot-inner">
+                      <div className="tx-timeline-item">
+                        <div className={`tx-timeline-dot ${idx === settlements.length - 1 ? 'dot-active' : ''}`} />
+                        <div className="tx-timeline-content">
+                          <div className="tx-timeline-row">
+                            <strong>Baixa {idx + 1}</strong>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span className="tx-timeline-amt">{formatCurrency(s.amount)}</span>
+                              {onDeleteSettlement && (
+                                <button
+                                  className="loan-item-delete-btn"
+                                  title="Excluir esta baixa"
+                                  onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(s.id); }}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'var(--text-muted)',
+                                    cursor: 'pointer',
+                                    padding: '2px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                  }}
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <p className="tx-timeline-date">{formatDate(s.date)}</p>
+
+                          {/* Confirmação inline */}
+                          {confirmDeleteId === s.id && (
+                            <div className="tx-settlement-confirm">
+                              <AlertTriangle size={13} style={{ color: 'var(--accent-gold)', flexShrink: 0 }} />
+                              <span>Excluir esta baixa e restaurar o saldo?</span>
+                              <div className="tx-settlement-confirm-btns">
+                                <button
+                                  className="tx-confirm-btn tx-confirm-yes"
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteSettlement(s.id); }}
+                                >
+                                  Sim
+                                </button>
+                                <button
+                                  className="tx-confirm-btn tx-confirm-no"
+                                  onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
+                                >
+                                  Não
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <p className="tx-timeline-date">{formatDate(s.date)}</p>
                     </div>
                   </div>
                 ))}
               </div>
+
             )}
           </div>
         </div>

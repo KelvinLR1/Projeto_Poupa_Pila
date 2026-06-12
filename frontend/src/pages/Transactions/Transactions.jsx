@@ -26,7 +26,7 @@ const getInitialDates = () => {
 };
 
 export function Transactions({ filterAccountId, setFilterAccountId }) {
-  const { transactions, accounts, loans, hideValues, markTransactionAsPaid } = useFinance();
+  const { transactions, accounts, loans, hideValues, markTransactionAsPaid, deleteSettlement } = useFinance();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all'); // 'all', 'payable', 'receivable'
   const [selectedTxForPayment, setSelectedTxForPayment] = useState(null);
@@ -287,6 +287,21 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
         transaction={selectedTxForDetails}
         onCancel={() => setSelectedTxForDetails(null)}
         onPayRemaining={handlePayRemaining}
+        onDeleteSettlement={async (txId, settlementId) => {
+          const result = await deleteSettlement(settlementId);
+          if (result) {
+            setSelectedTxForDetails(prev => {
+              if (prev && prev.id === txId) {
+                return {
+                  ...prev,
+                  status: result.status,
+                  settlements: result.settlements
+                };
+              }
+              return prev;
+            });
+          }
+        }}
       />
 
       {isAddingTransaction && (

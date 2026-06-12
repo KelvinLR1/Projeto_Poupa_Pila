@@ -545,3 +545,157 @@
   }
 }
 
+/* ================================================================
+   Multi-vínculo: exibição de N lançamentos vinculados
+   ================================================================ */
+.rec-multi-container {
+  border-left-color: #818cf8 !important;
+  background: rgba(99, 102, 241, 0.04) !important;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.rec-label-multi {
+  color: #818cf8 !important;
+}
+
+.rec-multi-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.rec-multi-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  background: rgba(99, 102, 241, 0.07);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+}
+
+.rec-multi-item-desc {
+  flex: 1;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rec-multi-item-amount {
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  font-size: 0.82rem;
+}
+
+.rec-multi-total {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #818cf8;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: var(--radius-full);
+  margin-top: 2px;
+  width: fit-content;
+}
+
+.partial-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  background: rgba(251, 191, 36, 0.1);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  margin-right: 4px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.total-val {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 400;
+  margin-left: 2px;
+}
+
+.rec-multi-residual-warning {
+  font-size: 0.72rem;
+  color: #fb923c;
+  font-weight: 500;
+  margin-left: 6px;
+}
+
+/* ================================================================
+   Desmembramento (Split): divisão em múltiplas categorias
+   ================================================================ */
+.rec-split-container {
+  border-left-color: #a855f7 !important;
+  background: rgba(168, 85, 247, 0.04) !important;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.rec-label-split {
+  color: #c084fc !important;
+}
+
+.rec-split-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.rec-split-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  background: rgba(168, 85, 247, 0.07);
+  border: 1px solid rgba(168, 85, 247, 0.15);
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+}
+
+.rec-split-item-cat {
+  font-weight: 700;
+  color: #c084fc;
+}
+
+.rec-split-item-desc {
+  flex: 1;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rec-split-item-amount {
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  font-size: 0.82rem;
+}
+
+.rec-action-btn.link-btn-text.text-purple {
+  color: #c084fc;
+}
+.rec-action-btn.link-btn-text.text-purple:hover {
+  text-shadow: 0 0 8px rgba(168, 85, 247, 0.4);
+  opacity: 0.85;
+}
+
+
