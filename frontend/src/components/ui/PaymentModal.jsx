@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { formatCurrency, maskCurrencyBRL, parseCurrencyBRL } from '../../utils/formatters';
 import { Button } from '../ui/Button';
@@ -9,6 +9,39 @@ import './PaymentModal.css';
 
 export function PaymentModal({ transaction, onConfirm, onCancel, loans = [] }) {
   const [isClosing, setIsClosing] = useState(false);
+  const containerRef = useRef(null);
+  const lastHeightRef = useRef(null);
+
+  useLayoutEffect(() => {
+    if (containerRef.current) {
+      const element = containerRef.current;
+      const prevHeightStyle = element.style.height;
+      element.style.height = '';
+      const newHeight = element.offsetHeight;
+      
+      if (lastHeightRef.current !== null && lastHeightRef.current !== newHeight) {
+        const oldHeight = lastHeightRef.current;
+        
+        element.style.transition = 'none';
+        element.style.height = `${oldHeight}px`;
+        element.offsetHeight; // force reflow
+        
+        element.style.transition = 'height 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+        element.style.height = `${newHeight}px`;
+        
+        const timer = setTimeout(() => {
+          element.style.height = '';
+          element.style.transition = '';
+        }, 300);
+        
+        lastHeightRef.current = newHeight;
+        return () => clearTimeout(timer);
+      } else {
+        element.style.height = prevHeightStyle;
+        lastHeightRef.current = newHeight;
+      }
+    }
+  });
   const settlements = transaction.settlements || [];
   const alreadyPaid = settlements.reduce((acc, s) => acc + s.amount, 0);
   const remaining = transaction.amount - alreadyPaid;
@@ -75,7 +108,7 @@ export function PaymentModal({ transaction, onConfirm, onCancel, loans = [] }) {
 
   return createPortal(
     <div className={`modal-overlay ${isClosing ? 'closing' : ''}`} onClick={handleClose}>
-      <div className="modal-container animate-slide-up" onClick={(e) => e.stopPropagation()}>
+      <div ref={containerRef} className="modal-container animate-slide-up" onClick={(e) => e.stopPropagation()}>
         
         <div className="modal-header">
           <div className="modal-header-content">

@@ -239,9 +239,29 @@
 
 .user-name {
   font-weight: 800;
-  background: linear-gradient(90deg, #fff 0%, #a1a1aa 100%);
+  background: linear-gradient(120deg, #ffffff 0%, var(--accent-emerald) 50%, #ffffff 100%);
+  background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: inline-block;
+  animation: nameShine 5s linear infinite;
+  transition: transform 0.3s var(--transition-fast), filter 0.3s var(--transition-fast);
+}
+
+.user-name:hover {
+  filter: drop-shadow(0 0 10px var(--accent-emerald-glow));
+  transform: translateY(-1px) scale(1.02);
+  cursor: default;
+}
+
+@keyframes nameShine {
+  0% {
+    background-position: 0% center;
+  }
+  100% {
+    background-position: -200% center;
+  }
 }
 
 .greeting p {

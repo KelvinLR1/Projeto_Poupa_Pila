@@ -486,6 +486,102 @@ app.post('/api/finance/transactions', authenticate, (req, res) => {
   }
 });
 
+app.post('/api/finance/transfers', authenticate, (req, res) => {
+  const { fromAccountId, toAccountId, amount, date, description } = req.body;
+  if (!fromAccountId || !toAccountId || amount === undefined || !date) {
+    return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
+  }
+
+  const parsedAmount = parseFloat(amount);
+  if (isNaN(parsedAmount) || parsedAmount <= 0) {
+    return res.status(400).json({ error: 'Valor da transferência inválido.' });
+  }
+
+  if (fromAccountId === toAccountId) {
+    return res.status(400).json({ error: 'As contas de origem e destino devem ser diferentes.' });
+  }
+
+  try {
+    db.exec('BEGIN TRANSACTION');
+
+    // 1. Verificar contas
+    const selectAccount = db.prepare('SELECT * FROM accounts WHERE id = ? AND user_id = ?');
+    const fromAcc = selectAccount.all(fromAccountId, req.user.id)[0];
+    const toAcc = selectAccount.all(toAccountId, req.user.id)[0];
+
+    if (!fromAcc || !toAcc) {
+      db.exec('ROLLBACK');
+      return res.status(404).json({ error: 'Uma ou ambas as contas não foram encontradas.' });
+    }
+
+    if (fromAcc.active === 0 || toAcc.active === 0) {
+      db.exec('ROLLBACK');
+      return res.status(400).json({ error: 'Não é possível transferir para/de contas inativas.' });
+    }
+
+    // Gerar IDs únicos
+    const transferId = Math.random().toString(36).substr(2, 9);
+    const expenseTxId = Math.random().toString(36).substr(2, 9);
+    const incomeTxId = Math.random().toString(36).substr(2, 9);
+    const expenseSettlementId = Math.random().toString(36).substr(2, 9);
+    const incomeSettlementId = Math.random().toString(36).substr(2, 9);
+
+    // Auto-registrar categoria "Transferência" se necessário
+    const categoryName = 'Transferência';
+    const catCheckExpense = db.prepare('SELECT id FROM categories WHERE user_id = ? AND name = ? AND type = ?').all(req.user.id, categoryName, 'expense')[0];
+    if (!catCheckExpense) {
+      const newCatId = Math.random().toString(36).substr(2, 9);
+      db.prepare('INSERT INTO categories (id, user_id, name, type) VALUES (?, ?, ?, ?)')
+        .run(newCatId, req.user.id, categoryName, 'expense');
+    }
+    const catCheckIncome = db.prepare('SELECT id FROM categories WHERE user_id = ? AND name = ? AND type = ?').all(req.user.id, categoryName, 'income')[0];
+    if (!catCheckIncome) {
+      const newCatId = Math.random().toString(36).substr(2, 9);
+      db.prepare('INSERT INTO categories (id, user_id, name, type) VALUES (?, ?, ?, ?)')
+        .run(newCatId, req.user.id, categoryName, 'income');
+    }
+
+    const defaultDesc = `Transferência de ${fromAcc.name} para ${toAcc.name}`;
+    const finalDesc = description && description.trim() ? description.trim() : defaultDesc;
+
+    // 2. Criar Transação de Despesa (Origem)
+    const insertTx = db.prepare(`
+      INSERT INTO transactions (id, user_id, accountId, type, amount, category, description, date, status, is_forecast, transfer_id)
+      VALUES (?, ?, ?, 'expense', ?, ?, ?, ?, 'paid', 0, ?)
+    `);
+    insertTx.run(expenseTxId, req.user.id, fromAccountId, parsedAmount, categoryName, finalDesc, date, transferId);
+
+    // Criar Baixa de Despesa
+    const insertSettlement = db.prepare(`
+      INSERT INTO settlements (id, transaction_id, date, amount, accountId)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+    insertSettlement.run(expenseSettlementId, expenseTxId, date, parsedAmount, fromAccountId);
+
+    // 3. Criar Transação de Receita (Destino)
+    const insertTxIncome = db.prepare(`
+      INSERT INTO transactions (id, user_id, accountId, type, amount, category, description, date, status, is_forecast, transfer_id)
+      VALUES (?, ?, ?, 'income', ?, ?, ?, ?, 'paid', 0, ?)
+    `);
+    insertTxIncome.run(incomeTxId, req.user.id, toAccountId, parsedAmount, categoryName, finalDesc, date, transferId);
+
+    // Criar Baixa de Receita
+    insertSettlement.run(incomeSettlementId, incomeTxId, date, parsedAmount, toAccountId);
+
+    // 4. Atualizar Saldos das Contas
+    const updateBalance = db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ?');
+    updateBalance.run(-parsedAmount, fromAccountId, req.user.id);
+    updateBalance.run(parsedAmount, toAccountId, req.user.id);
+
+    db.exec('COMMIT');
+    res.json({ success: true, transferId });
+  } catch (error) {
+    db.exec('ROLLBACK');
+    console.error('Erro ao realizar transferência:', error);
+    res.status(500).json({ error: 'Erro ao processar transferência.' });
+  }
+});
+
 app.post('/api/finance/transactions/:id/pay', authenticate, (req, res) => {
   const { id } = req.params;
   const { paidAmount, actualAmount, asLoan, loanId, loanCounterpart, loanDueDate, loanTitle } = req.body;
@@ -944,6 +1040,30 @@ app.delete('/api/finance/settlements/:settlementId', authenticate, (req, res) =>
     if (!tx) {
       db.exec('ROLLBACK');
       return res.status(403).json({ error: 'Acesso negado.' });
+    }
+
+    if (tx.transfer_id) {
+      // É uma transferência: removemos AMBOS os lados (transações e quitações) e revertemos saldos
+      const selectTransferTxs = db.prepare('SELECT * FROM transactions WHERE transfer_id = ? AND user_id = ?');
+      const transferTxs = selectTransferTxs.all(tx.transfer_id, req.user.id);
+
+      for (const t of transferTxs) {
+        // Encontra todas as quitações desta transação
+        const tSettlements = db.prepare('SELECT * FROM settlements WHERE transaction_id = ?').all(t.id);
+        for (const s of tSettlements) {
+          // Reverte o saldo da conta associada à quitação
+          const amountChange = t.type === 'income' ? -s.amount : s.amount;
+          db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ?')
+            .run(amountChange, s.accountId, req.user.id);
+          // Deleta a quitação
+          db.prepare('DELETE FROM settlements WHERE id = ?').run(s.id);
+        }
+        // Deleta a transação
+        db.prepare('DELETE FROM transactions WHERE id = ?').run(t.id);
+      }
+
+      db.exec('COMMIT');
+      return res.json({ success: true, isTransferRollback: true, status: 'deleted', settlements: [] });
     }
 
     // Exclui o settlement

@@ -343,6 +343,29 @@ export function FinanceProvider({ children }) {
     }
   };
 
+  const transferFunds = async (transferData) => {
+    try {
+      const res = await fetch('/api/finance/transfers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(transferData)
+      });
+      if (res.ok) {
+        await fetchFinanceData();
+        return { success: true };
+      } else {
+        const data = await res.json();
+        throw new Error(data.error || 'Erro ao realizar transferência');
+      }
+    } catch (e) {
+      console.error('Erro ao realizar transferência:', e);
+      throw e;
+    }
+  };
+
   return (
     <FinanceContext.Provider value={{
       accounts,
@@ -367,7 +390,8 @@ export function FinanceProvider({ children }) {
       deleteCategory,
       updateCategory,
       addCategoryLimit,
-      deleteCategoryLimit
+      deleteCategoryLimit,
+      transferFunds
     }}>
       {children}
     </FinanceContext.Provider>

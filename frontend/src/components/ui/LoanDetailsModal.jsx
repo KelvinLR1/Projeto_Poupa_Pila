@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useFinance } from '../../context/FinanceContext';
 import { formatCurrency, formatDate } from '../../utils/formatters';
@@ -10,6 +10,39 @@ import './LoanDetailsModal.css';
 
 export function LoanDetailsModal({ loan, onClose, onAddAmount, onRegisterPayment }) {
   const { toggleLoanType, deleteLoanHistoryItem } = useFinance();
+  const containerRef = useRef(null);
+  const lastHeightRef = useRef(null);
+
+  useLayoutEffect(() => {
+    if (containerRef.current) {
+      const element = containerRef.current;
+      const prevHeightStyle = element.style.height;
+      element.style.height = '';
+      const newHeight = element.offsetHeight;
+      
+      if (lastHeightRef.current !== null && lastHeightRef.current !== newHeight) {
+        const oldHeight = lastHeightRef.current;
+        
+        element.style.transition = 'none';
+        element.style.height = `${oldHeight}px`;
+        element.offsetHeight; // force reflow
+        
+        element.style.transition = 'height 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+        element.style.height = `${newHeight}px`;
+        
+        const timer = setTimeout(() => {
+          element.style.height = '';
+          element.style.transition = '';
+        }, 300);
+        
+        lastHeightRef.current = newHeight;
+        return () => clearTimeout(timer);
+      } else {
+        element.style.height = prevHeightStyle;
+        lastHeightRef.current = newHeight;
+      }
+    }
+  });
 
   const handleDeleteItem = async (itemId) => {
     if (window.confirm('Excluir este lançamento e atualizar os saldos do empréstimo?')) {
@@ -25,6 +58,14 @@ export function LoanDetailsModal({ loan, onClose, onAddAmount, onRegisterPayment
 
   const [showAllLoans,    setShowAllLoans]    = useState(false);
   const [showAllPayments, setShowAllPayments] = useState(false);
+  const [viewMode, setViewMode]               = useState('columns'); // 'columns' | 'timeline'
+
+  const isOutgoing = (item) => {
+    const dir = item.direction || loan.type;
+    return (item.type === 'loan' && dir === 'lent') || (item.type === 'payment' && dir === 'borrowed');
+  };
+
+  const timelineEntries = [...loan.history].sort((a, b) => new Date(b.date) - new Date(a.date));
 
   const LIMIT = 4;
 
@@ -55,7 +96,7 @@ export function LoanDetailsModal({ loan, onClose, onAddAmount, onRegisterPayment
 
   return createPortal(
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-container loan-details-container" onClick={e => e.stopPropagation()}>
+      <div ref={containerRef} className="modal-container loan-details-container" onClick={e => e.stopPropagation()}>
 
         {/* Header */}
         <div className="modal-header">
@@ -121,8 +162,73 @@ export function LoanDetailsModal({ loan, onClose, onAddAmount, onRegisterPayment
             </div>
           </div>
 
-          {/* Duas colunas */}
-          <div className="loan-columns">
+          {/* Seletor de visualização */}
+          <div className="loan-view-selector">
+            <button 
+              className={`view-tab ${viewMode === 'columns' ? 'active' : ''}`}
+              onClick={() => setViewMode('columns')}
+            >
+              Colunas Separadas
+            </button>
+            <button 
+              className={`view-tab ${viewMode === 'timeline' ? 'active' : ''}`}
+              onClick={() => setViewMode('timeline')}
+            >
+              Linha do Tempo
+            </button>
+          </div>
+
+          {viewMode === 'timeline' ? (
+            <div className="loan-timeline-view">
+              {timelineEntries.length === 0 ? (
+                <p className="loan-col-empty">Nenhum registro no histórico.</p>
+              ) : (
+                <div className="loan-timeline">
+                  {timelineEntries.map(item => {
+                    const outgoing = isOutgoing(item);
+                    const typeLabel = item.type === 'loan' ? 'Empréstimo' : 'Pagamento';
+                    
+                    return (
+                      <div key={item.id} className="loan-timeline-item">
+                        <div className="loan-timeline-badge">
+                          <div className={`loan-timeline-dot ${outgoing ? 'dot-out' : 'dot-in'}`}>
+                            {outgoing ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
+                          </div>
+                        </div>
+                        <div className="loan-timeline-content">
+                          <div className="loan-timeline-top">
+                            <span className="loan-timeline-desc" title={item.description}>{item.description}</span>
+                            <span className={`loan-timeline-amount ${outgoing ? 'amount-out' : 'amount-in'}`}>
+                              {outgoing ? '−' : '+'}{formatCurrency(item.amount)}
+                            </span>
+                          </div>
+                          <div className="loan-timeline-meta">
+                            <span className="timeline-badge-type">{typeLabel}</span>
+                            <span>{formatDate(item.date)}</span>
+                            {item.dueDate && (
+                              <span className="loan-col-due">
+                                <Calendar size={10} />
+                                {formatDate(item.dueDate)}
+                              </span>
+                            )}
+                            <button 
+                              className="loan-item-delete-btn" 
+                              title="Excluir lançamento"
+                              onClick={() => handleDeleteItem(item.id)}
+                              style={{ opacity: 1 }}
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="loan-columns">
 
             {/* Coluna Esquerda — Saídas / Fluxo de Saída */}
             <div className="loan-col">
@@ -209,6 +315,7 @@ export function LoanDetailsModal({ loan, onClose, onAddAmount, onRegisterPayment
               </div>
             </div>
           </div>
+          )}
         </div>
 
         {/* Footer */}

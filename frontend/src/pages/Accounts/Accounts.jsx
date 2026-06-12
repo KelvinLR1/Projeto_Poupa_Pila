@@ -1,19 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useFinance } from '../../context/FinanceContext';
 import { formatCurrency, maskCurrencyBRL, parseCurrencyBRL } from '../../utils/formatters';
 import { GlassCard } from '../../components/ui/GlassCard';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { AccountEditModal } from '../../components/ui/AccountEditModal';
-import { Plus, Wallet, Building2, Landmark, Check, Activity, Pencil, EyeOff, Eye } from 'lucide-react';
+import { Plus, Wallet, Building2, Landmark, Check, Activity, Pencil, EyeOff, Eye, ArrowLeftRight } from 'lucide-react';
 import { CustomSelect } from '../../components/ui/CustomSelect';
+import { TransferModal } from '../../components/ui/TransferModal';
 import './Accounts.css';
 
 export function Accounts() {
   const { accounts, addAccount, toggleAccountStatus, hideValues } = useFinance();
   const [isAdding, setIsAdding]           = useState(false);
+  const [isTransferring, setIsTransferring] = useState(false);
   const [editingAccount, setEditingAccount] = useState(null);
   const [newAccount, setNewAccount]       = useState({ name: '', type: 'checking', color: '#10b981', initialBalance: '' });
+
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (isAdding && inputRef.current) {
+      const timer = setTimeout(() => {
+        inputRef.current.focus();
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [isAdding]);
 
   const handleAdd = (e) => {
     e.preventDefault();
@@ -114,7 +127,10 @@ export function Accounts() {
           <h2 className="page-title">Minhas Contas</h2>
           <p className="page-subtitle">Gerencie suas carteiras e contas bancárias.</p>
         </div>
-        <div className="page-actions">
+        <div className="page-actions" style={{ display: 'flex', gap: '12px' }}>
+          <Button variant="secondary" icon={<ArrowLeftRight size={18} />} onClick={() => setIsTransferring(true)}>
+            Transferir Saldo
+          </Button>
           {!isAdding && (
             <Button variant="primary" icon={<Plus size={18} />} onClick={() => setIsAdding(true)}>
               Nova Conta
@@ -124,62 +140,67 @@ export function Accounts() {
       </div>
 
       {/* Formulário de nova conta */}
-      {isAdding && (
-        <GlassCard className="add-account-form animate-slide-up">
-          <h3>Adicionar Nova Conta</h3>
-          <form onSubmit={handleAdd}>
-            <div className="form-group">
-              <label>Nome da Instituição / Conta</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="Ex: Nubank, Bradesco, Carteira Física"
-                value={newAccount.name}
-                onChange={(e) => setNewAccount({ ...newAccount, name: e.target.value })}
-                autoFocus
-              />
-            </div>
-            <div className="form-row">
+      <div className={`add-account-wrapper ${isAdding ? 'open' : ''}`}>
+        <div className="add-account-inner">
+          <GlassCard className="add-account-form">
+            <h3>Adicionar Nova Conta</h3>
+            <form onSubmit={handleAdd}>
               <div className="form-group">
-                <label>Tipo de Conta</label>
-                <CustomSelect
-                  value={newAccount.type}
-                  onChange={(e) => setNewAccount({ ...newAccount, type: e.target.value })}
-                  options={[
-                    { value: 'checking', label: 'Conta Corrente' },
-                    { value: 'savings', label: 'Poupança' },
-                    { value: 'investment', label: 'Investimento' },
-                    { value: 'wallet', label: 'Carteira Física' }
-                  ]}
-                />
-              </div>
-              <div className="form-group">
-                <label>Saldo Inicial (R$)</label>
+                <label>Nome da Instituição / Conta</label>
                 <input
+                  ref={inputRef}
                   type="text"
                   className="form-input"
-                  value={newAccount.initialBalance}
-                  onChange={(e) => setNewAccount({ ...newAccount, initialBalance: maskCurrencyBRL(e.target.value) })}
-                  placeholder="0,00"
+                  placeholder="Ex: Nubank, Bradesco, Carteira Física"
+                  value={newAccount.name}
+                  onChange={(e) => setNewAccount({ ...newAccount, name: e.target.value })}
                 />
               </div>
-              <div className="form-group">
-                <label>Cor Identificadora</label>
-                <input
-                  type="color"
-                  value={newAccount.color}
-                  onChange={(e) => setNewAccount({ ...newAccount, color: e.target.value })}
-                  className="color-picker"
-                />
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Tipo de Conta</label>
+                  <CustomSelect
+                    value={newAccount.type}
+                    onChange={(e) => setNewAccount({ ...newAccount, type: e.target.value })}
+                    options={[
+                      { value: 'checking', label: 'Conta Corrente' },
+                      { value: 'savings', label: 'Poupança' },
+                      { value: 'investment', label: 'Investimento' },
+                      { value: 'wallet', label: 'Carteira Física' }
+                    ]}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Saldo Inicial (R$)</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={newAccount.initialBalance}
+                    onChange={(e) => setNewAccount({ ...newAccount, initialBalance: maskCurrencyBRL(e.target.value) })}
+                    placeholder="0,00"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Cor Identificadora</label>
+                  <div className="color-input-row">
+                    <input
+                      type="color"
+                      value={newAccount.color}
+                      onChange={(e) => setNewAccount({ ...newAccount, color: e.target.value })}
+                      className="color-picker-input"
+                    />
+                    <span className="color-hex">{newAccount.color.toUpperCase()}</span>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="form-actions">
-              <Button type="button" variant="secondary" onClick={() => setIsAdding(false)}>Cancelar</Button>
-              <Button type="submit" variant="success" icon={<Check size={18} />}>Salvar Conta</Button>
-            </div>
-          </form>
-        </GlassCard>
-      )}
+              <div className="form-actions">
+                <Button type="button" variant="secondary" onClick={() => setIsAdding(false)}>Cancelar</Button>
+                <Button type="submit" variant="success" icon={<Check size={18} />}>Salvar Conta</Button>
+              </div>
+            </form>
+          </GlassCard>
+        </div>
+      </div>
 
       {/* Contas Ativas */}
       {activeAccounts.length > 0 && (
@@ -208,6 +229,13 @@ export function Accounts() {
         <AccountEditModal
           account={editingAccount}
           onClose={() => setEditingAccount(null)}
+        />
+      )}
+
+      {/* Modal de transferência */}
+      {isTransferring && (
+        <TransferModal
+          onClose={() => setIsTransferring(false)}
         />
       )}
     </div>

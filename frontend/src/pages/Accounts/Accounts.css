@@ -1,7 +1,27 @@
-﻿.accounts-page {
+.accounts-page {
   display: flex;
   flex-direction: column;
   gap: 32px;
+}
+
+.add-account-wrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.38s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, margin-bottom 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  opacity: 0;
+  margin-bottom: 0;
+  width: 100%;
+}
+
+.add-account-wrapper.open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  margin-bottom: 32px;
+}
+
+.add-account-inner {
+  min-height: 0;
 }
 
 .add-account-form {
@@ -248,4 +268,67 @@
     justify-content: center;
   }
 }
+
+/* Perfeita harmonia e alinhamento do formulário de nova conta */
+.add-account-form .form-group input[type="text"],
+.add-account-form .custom-select-trigger,
+.add-account-form .color-input-row {
+  height: 44px !important;
+  box-sizing: border-box !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+.add-account-form .custom-select-trigger {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  background: var(--surface-light) !important;
+}
+
+.add-account-form .color-input-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface-light);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0 12px;
+  transition: all var(--transition-fast) ease;
+  box-sizing: border-box;
+}
+
+.add-account-form .color-input-row:focus-within {
+  border-color: var(--accent-emerald);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.add-account-form .color-picker-input {
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background: none;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.add-account-form .color-picker-input::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.add-account-form .color-picker-input::-webkit-color-swatch {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.add-account-form .color-hex {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  font-family: monospace;
+}
+
 

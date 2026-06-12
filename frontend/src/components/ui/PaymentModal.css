@@ -62,6 +62,7 @@
   backdrop-filter: blur(40px);
   overflow: hidden;
   animation: modalIn 280ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Header compartilhado */

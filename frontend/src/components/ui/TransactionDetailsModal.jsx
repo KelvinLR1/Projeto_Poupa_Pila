@@ -9,6 +9,39 @@ import './TransactionDetailsModal.css';
 
 export function TransactionDetailsModal({ transaction, onCancel, onPayRemaining, onDeleteSettlement }) {
   const [isClosing, setIsClosing] = React.useState(false);
+  const containerRef = React.useRef(null);
+  const lastHeightRef = React.useRef(null);
+
+  React.useLayoutEffect(() => {
+    if (containerRef.current) {
+      const element = containerRef.current;
+      const prevHeightStyle = element.style.height;
+      element.style.height = '';
+      const newHeight = element.offsetHeight;
+      
+      if (lastHeightRef.current !== null && lastHeightRef.current !== newHeight) {
+        const oldHeight = lastHeightRef.current;
+        
+        element.style.transition = 'none';
+        element.style.height = `${oldHeight}px`;
+        element.offsetHeight; // force reflow
+        
+        element.style.transition = 'height 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+        element.style.height = `${newHeight}px`;
+        
+        const timer = setTimeout(() => {
+          element.style.height = '';
+          element.style.transition = '';
+        }, 300);
+        
+        lastHeightRef.current = newHeight;
+        return () => clearTimeout(timer);
+      } else {
+        element.style.height = prevHeightStyle;
+        lastHeightRef.current = newHeight;
+      }
+    }
+  });
   const [confirmDeleteId, setConfirmDeleteId] = React.useState(null);
   const [removingId, setRemovingId] = React.useState(null);
   const [isMounted, setIsMounted] = React.useState(false);
@@ -67,7 +100,7 @@ export function TransactionDetailsModal({ transaction, onCancel, onPayRemaining,
 
   return createPortal(
     <div className={`modal-overlay ${isClosing ? 'closing' : ''}`} onClick={handleClose}>
-      <div className="modal-container tx-details-container" onClick={e => e.stopPropagation()}>
+      <div ref={containerRef} className="modal-container tx-details-container" onClick={e => e.stopPropagation()}>
 
         {/* Header */}
         <div className="modal-header">

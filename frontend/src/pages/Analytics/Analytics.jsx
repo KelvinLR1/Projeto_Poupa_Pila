@@ -54,11 +54,11 @@ export function Analytics() {
 
   // --- 2. Cálculos Financeiros (KPIs) ---
   const totalIncome = filteredTransactions
-    .filter(t => t.type === 'income')
+    .filter(t => t.type === 'income' && t.category.toLowerCase().trim() !== 'transferência')
     .reduce((sum, t) => sum + t.amount, 0);
 
   const totalExpense = filteredTransactions
-    .filter(t => t.type === 'expense')
+    .filter(t => t.type === 'expense' && t.category.toLowerCase().trim() !== 'transferência')
     .reduce((sum, t) => sum + t.amount, 0);
 
   const savings = totalIncome - totalExpense;
@@ -87,7 +87,7 @@ export function Analytics() {
 
   // --- 3. Rosca SVG: Distribuição por Categoria ---
   const expenseByCategory = filteredTransactions
-    .filter(t => t.type === 'expense')
+    .filter(t => t.type === 'expense' && t.category.toLowerCase().trim() !== 'transferência')
     .reduce((acc, t) => {
       const cat = t.category.trim();
       acc[cat] = (acc[cat] || 0) + t.amount;
@@ -107,12 +107,12 @@ export function Analytics() {
   const donutSegments = categoryExpensesList.map((cat, index) => {
     const percentage = totalExpenseInList > 0 ? (cat.amount / totalExpenseInList) * 100 : 0;
     const strokeLength = (percentage / 100) * 314.16; // Circunferência de raio 50 = 2 * PI * 50 = 314.16
-    const strokeOffset = 314.16 - strokeLength + (cumulativePercent / 100) * 314.16;
+    const strokeOffset = 314.16 - (cumulativePercent / 100) * 314.16;
     cumulativePercent += percentage;
     return {
       ...cat,
       color: CHART_COLORS[index % CHART_COLORS.length],
-      strokeDasharray: `${strokeLength} 314.16`,
+      strokeDasharray: `${strokeLength} ${314.16 - strokeLength}`,
       strokeDashoffset: strokeOffset,
       percentage
     };
@@ -141,6 +141,7 @@ export function Analytics() {
 
   const monthlyTotals = getMonthsRangeList();
   transactions.forEach(t => {
+    if (t.category.toLowerCase().trim() === 'transferência') return;
     const tMonthKey = t.date.substring(0, 7); // YYYY-MM
     const foundMonth = monthlyTotals.find(m => m.key === tMonthKey);
     if (foundMonth) {
@@ -159,7 +160,7 @@ export function Analytics() {
   // Desejos/Lazer (Variáveis): Lazer, Presentes, Outros (padrão)
   // Poupança/Investimento: Investimentos e Poupança
   const rulesBreakdown = filteredTransactions
-    .filter(t => t.type === 'expense')
+    .filter(t => t.type === 'expense' && t.category.toLowerCase().trim() !== 'transferência')
     .reduce((acc, t) => {
       const catName = (t.category || '').toLowerCase().trim();
       const categoryObj = categories.find(c => (c.name || '').toLowerCase().trim() === catName);

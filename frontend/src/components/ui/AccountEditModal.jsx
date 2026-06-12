@@ -20,21 +20,29 @@ export function AccountEditModal({ account, onClose }) {
   const [name,    setName]    = useState(account.name);
   const [type,    setType]    = useState(account.type);
   const [color,   setColor]   = useState(account.color);
+  const [isClosing, setIsClosing] = useState(false);
 
   const isDirty =
     name  !== account.name  ||
     type  !== account.type  ||
     color !== account.color;
 
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      onClose();
+    }, 180);
+  };
+
   const handleSave = (e) => {
     e.preventDefault();
     if (!name.trim()) return;
     updateAccount(account.id, { name: name.trim(), type, color });
-    onClose();
+    handleClose();
   };
 
   return createPortal(
-    <div className="modal-overlay" onClick={onClose}>
+    <div className={`modal-overlay ${isClosing ? 'closing' : ''}`} onClick={handleClose}>
       <div className="modal-container acc-edit-container" onClick={e => e.stopPropagation()}>
 
         <div className="modal-header">
@@ -42,7 +50,7 @@ export function AccountEditModal({ account, onClose }) {
             <h3>Editar Conta</h3>
             <p>Altere nome, tipo ou cor identificadora.</p>
           </div>
-          <button className="close-btn" onClick={onClose} title="Fechar">
+          <button className="close-btn" onClick={handleClose} title="Fechar">
             <X size={18} />
           </button>
         </div>
@@ -94,7 +102,7 @@ export function AccountEditModal({ account, onClose }) {
         </form>
 
         <div className="modal-footer">
-          <Button variant="secondary" type="button" onClick={onClose}>Cancelar</Button>
+          <Button variant="secondary" type="button" onClick={handleClose}>Cancelar</Button>
           <Button
             variant="primary"
             icon={<Check size={16} />}

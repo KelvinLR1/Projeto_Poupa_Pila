@@ -131,9 +131,12 @@
 }
 
 .light-theme .user-name {
-  background: linear-gradient(90deg, #121216 0%, #4b5563 100%);
+  background: linear-gradient(120deg, #121216 0%, var(--accent-emerald) 50%, #121216 100%);
+  background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: nameShine 5s linear infinite;
 }
 
 /* ==========================================

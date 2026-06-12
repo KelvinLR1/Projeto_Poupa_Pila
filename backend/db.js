@@ -63,6 +63,12 @@ try {
   // Column already exists, safe to ignore
 }
 
+try {
+  db.exec('ALTER TABLE transactions ADD COLUMN transfer_id TEXT');
+} catch (e) {
+  // Column already exists, safe to ignore
+}
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS settlements (
     id TEXT PRIMARY KEY,
@@ -237,6 +243,7 @@ function seedUserCategories(userId) {
         { name: 'Presentes', type: 'income', rule_type: null },
         { name: 'Receita', type: 'income', rule_type: null },
         { name: 'Recebimento de Empréstimo', type: 'income', rule_type: null },
+        { name: 'Transferência', type: 'income', rule_type: null },
         // Despesas (expenses)
         { name: 'Alimentação', type: 'expense', rule_type: 'necessity' },
         { name: 'Moradia', type: 'expense', rule_type: 'necessity' },
@@ -246,6 +253,7 @@ function seedUserCategories(userId) {
         { name: 'Educação', type: 'expense', rule_type: 'necessity' },
         { name: 'Despesa', type: 'expense', rule_type: 'want' },
         { name: 'Empréstimo', type: 'expense', rule_type: 'want' },
+        { name: 'Transferência', type: 'expense', rule_type: null },
         { name: 'Outros', type: 'expense', rule_type: 'want' }
       ];
       defaults.forEach(cat => {
