@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const crypto = require('node:crypto');
-const { db } = require('./db');
+const { db, seedUserCategories } = require('./db');
 const cryptoUtils = require('./crypto');
 require('dotenv').config();
 
@@ -279,6 +279,9 @@ app.delete('/api/settings/access/:id', authenticate, (req, res) => {
 
 app.get('/api/finance/data', authenticate, (req, res) => {
   try {
+    // Garante que o usuário possua as categorias iniciais
+    seedUserCategories(req.user.id);
+
     // 1. Contas
     const accounts = db.prepare('SELECT * FROM accounts WHERE user_id = ?').all(req.user.id);
     // Converter o active do SQLite (0/1) para boolean
@@ -302,10 +305,18 @@ app.get('/api/finance/data', authenticate, (req, res) => {
       return { ...l, history };
     });
 
+    // 4. Categorias do usuário
+    const categories = db.prepare('SELECT * FROM categories WHERE user_id = ?').all(req.user.id);
+
+    // 5. Limites de Gastos / Orçamentos
+    const categoryLimits = db.prepare('SELECT * FROM category_limits WHERE user_id = ?').all(req.user.id);
+
     res.json({
       accounts: formattedAccounts,
       transactions: formattedTransactions,
-      loans: formattedLoans
+      loans: formattedLoans,
+      categories,
+      categoryLimits
     });
   } catch (error) {
     console.error('Erro ao buscar dados financeiros:', error);
@@ -388,6 +399,14 @@ app.post('/api/finance/transactions', authenticate, (req, res) => {
   try {
     // Executa em bloco
     db.exec('BEGIN TRANSACTION');
+
+    // Auto-registra a categoria caso ela ainda não exista
+    const catCheck = db.prepare('SELECT id FROM categories WHERE user_id = ? AND LOWER(TRIM(name)) = LOWER(TRIM(?)) AND type = ?').all(req.user.id, category, type)[0];
+    if (!catCheck) {
+      const newCatId = Math.random().toString(36).substr(2, 9);
+      db.prepare('INSERT INTO categories (id, user_id, name, type) VALUES (?, ?, ?, ?)')
+        .run(newCatId, req.user.id, category.trim(), type);
+    }
 
     const insertTx = db.prepare(`
       INSERT INTO transactions (id, user_id, accountId, type, amount, category, description, date, status, is_forecast)
@@ -957,6 +976,113 @@ app.delete('/api/finance/settlements/:settlementId', authenticate, (req, res) =>
     db.exec('ROLLBACK');
     console.error('Erro ao excluir quitação:', error);
     res.status(500).json({ error: 'Erro ao excluir quitação.' });
+  }
+});
+
+// ─── Rotas de Categorias & Limites de Gastos ───
+
+app.post('/api/finance/categories', authenticate, (req, res) => {
+  const { id, name, type, rule_type } = req.body;
+  if (!name || !type) {
+    return res.status(400).json({ error: 'Nome e tipo são obrigatórios.' });
+  }
+
+  try {
+    const trimmedName = name.trim();
+    const exists = db.prepare('SELECT id FROM categories WHERE user_id = ? AND LOWER(TRIM(name)) = LOWER(TRIM(?)) AND type = ?').all(req.user.id, trimmedName, type)[0];
+    if (exists) {
+      return res.status(400).json({ error: 'Esta categoria já existe.' });
+    }
+
+    const newId = id || Math.random().toString(36).substr(2, 9);
+    const insert = db.prepare('INSERT INTO categories (id, user_id, name, type, rule_type) VALUES (?, ?, ?, ?, ?)');
+    insert.run(newId, req.user.id, trimmedName, type, rule_type || null);
+
+    res.json({ success: true, category: { id: newId, name: trimmedName, type, rule_type: rule_type || null } });
+  } catch (error) {
+    console.error('Erro ao adicionar categoria:', error);
+    res.status(500).json({ error: 'Erro ao adicionar categoria.' });
+  }
+});
+
+app.put('/api/finance/categories/:id', authenticate, (req, res) => {
+  const { id } = req.params;
+  const { name, type, rule_type } = req.body;
+  try {
+    const category = db.prepare('SELECT * FROM categories WHERE id = ? AND user_id = ?').all(id, req.user.id)[0];
+    if (!category) {
+      return res.status(404).json({ error: 'Categoria não encontrada.' });
+    }
+
+    const updatedName = name !== undefined ? name.trim() : category.name;
+    const updatedType = type !== undefined ? type : category.type;
+    const updatedRuleType = rule_type !== undefined ? rule_type : category.rule_type;
+
+    db.prepare('UPDATE categories SET name = ?, type = ?, rule_type = ? WHERE id = ?').run(updatedName, updatedType, updatedRuleType, id);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Erro ao atualizar categoria:', error);
+    res.status(500).json({ error: 'Erro ao atualizar categoria.' });
+  }
+});
+
+app.delete('/api/finance/categories/:id', authenticate, (req, res) => {
+  const { id } = req.params;
+  try {
+    const category = db.prepare('SELECT * FROM categories WHERE id = ? AND user_id = ?').all(id, req.user.id)[0];
+    if (!category) {
+      return res.status(404).json({ error: 'Categoria não encontrada.' });
+    }
+
+    db.prepare('DELETE FROM categories WHERE id = ?').run(id);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Erro ao deletar categoria:', error);
+    res.status(500).json({ error: 'Erro ao deletar categoria.' });
+  }
+});
+
+app.post('/api/finance/category-limits', authenticate, (req, res) => {
+  const { id, category_name, limit_amount, period, alert_threshold } = req.body;
+  if (!category_name || limit_amount === undefined || !period) {
+    return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
+  }
+
+  const amt = parseFloat(limit_amount);
+  const thresh = alert_threshold !== undefined ? parseFloat(alert_threshold) : 80.0;
+
+  try {
+    const exists = db.prepare('SELECT id FROM category_limits WHERE user_id = ? AND category_name = ? AND period = ?').all(req.user.id, category_name, period)[0];
+    
+    if (exists) {
+      const update = db.prepare('UPDATE category_limits SET limit_amount = ?, alert_threshold = ? WHERE id = ?');
+      update.run(amt, thresh, exists.id);
+      res.json({ success: true, id: exists.id });
+    } else {
+      const newId = id || Math.random().toString(36).substr(2, 9);
+      const insert = db.prepare('INSERT INTO category_limits (id, user_id, category_name, limit_amount, period, alert_threshold) VALUES (?, ?, ?, ?, ?, ?)');
+      insert.run(newId, req.user.id, category_name, amt, period, thresh);
+      res.json({ success: true, id: newId });
+    }
+  } catch (error) {
+    console.error('Erro ao salvar limite de gastos:', error);
+    res.status(500).json({ error: 'Erro ao salvar limite de gastos.' });
+  }
+});
+
+app.delete('/api/finance/category-limits/:id', authenticate, (req, res) => {
+  const { id } = req.params;
+  try {
+    const limit = db.prepare('SELECT * FROM category_limits WHERE id = ? AND user_id = ?').all(id, req.user.id)[0];
+    if (!limit) {
+      return res.status(404).json({ error: 'Limite não encontrado.' });
+    }
+
+    db.prepare('DELETE FROM category_limits WHERE id = ?').run(id);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Erro ao deletar limite de gastos:', error);
+    res.status(500).json({ error: 'Erro ao deletar limite de gastos.' });
   }
 });
 

@@ -22,7 +22,7 @@ function addMonthsHelper(dateStr, months) {
 }
 
 export function TransactionFormDrawer({ onClose }) {
-  const { addTransaction, accounts } = useFinance();
+  const { addTransaction, accounts, categories } = useFinance();
   const [type, setType] = useState('expense');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -369,7 +369,16 @@ export function TransactionFormDrawer({ onClose }) {
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                     placeholder="Ex: Moradia"
+                    list="drawer-categories"
                   />
+                  <datalist id="drawer-categories">
+                    {categories
+                      .filter(c => c.type === type)
+                      .map(c => (
+                        <option key={c.id} value={c.name} />
+                      ))
+                    }
+                  </datalist>
                 </div>
               </div>
 

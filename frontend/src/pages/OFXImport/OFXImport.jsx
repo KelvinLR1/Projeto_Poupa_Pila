@@ -13,6 +13,7 @@ import './OFXImport.css';
 import { CustomSelect } from '../../components/ui/CustomSelect';
 import { ReconcileSelectModal, getRemainingAmount } from '../../components/ui/ReconcileSelectModal';
 import { SplitTransactionModal } from '../../components/ui/SplitTransactionModal';
+import { OFXLoanLinkModal } from '../../components/ui/OFXLoanLinkModal';
 
 // Calcula a similaridade entre dois textos (para conciliação)
 function similarity(a = '', b = '') {
@@ -24,7 +25,7 @@ function similarity(a = '', b = '') {
 }
 
 export function OFXImport() {
-  const { transactions, accounts, addTransaction, markTransactionAsPaid } = useFinance();
+  const { transactions, accounts, loans, addTransaction, markTransactionAsPaid, addLoan, payLoan } = useFinance();
   const [isDragging, setIsDragging] = useState(false);
   const [parsed, setParsed] = useState(null); // { transactions, balance, bankId }
   const [accountId, setAccountId] = useState(accounts[0]?.id || '');
@@ -34,6 +35,8 @@ export function OFXImport() {
   const [manualLinks, setManualLinks] = useState({}); // fitId -> sysTx.id ou null (caso explicitamente desvinculado)
   const [selectingFitId, setSelectingFitId] = useState(null);
   const [splittingFitId, setSplittingFitId] = useState(null);
+  const [linkingLoanFitId, setLinkingLoanFitId] = useState(null);
+  const [loanLinks, setLoanLinks] = useState({}); // fitId -> loanLinkData
   const [txCategories, setTxCategories] = useState({}); // fitId -> categoria personalizada
 
   // Preenche categorias sugeridas com base no histórico
@@ -122,6 +125,7 @@ export function OFXImport() {
 
   // Retorna TODOS os vínculos ativos (suporte a multi-conciliação)
   const getActiveMatches = useCallback((tx) => {
+    if (loanLinks[tx.fitId]) return [];
     if (manualLinks[tx.fitId] === null) return [];
     const link = manualLinks[tx.fitId];
     
@@ -169,6 +173,7 @@ export function OFXImport() {
 
     for (const tx of toImport) {
       const manualLink = manualLinks[tx.fitId];
+      const loanLink = loanLinks[tx.fitId];
       
       if (manualLink && manualLink.isNewSplit) {
         // Importa desmembrado em múltiplas novas transações
@@ -181,6 +186,54 @@ export function OFXImport() {
             description: split.description,
             date: tx.date,
             status: 'paid',
+          });
+        }
+        importedCount++;
+      } else if (loanLink) {
+        // Vínculo com empréstimo:
+        // 1. Cria a transação correspondente na conta bancária (atualiza o saldo bancário)
+        const cat = tx.type === 'income' ? 'Recebimento de Empréstimo' : 'Empréstimo';
+        await addTransaction({
+          accountId: accountId,
+          type: tx.type,
+          amount: tx.amount,
+          category: cat,
+          description: tx.description,
+          date: tx.date,
+          status: 'paid',
+        });
+
+        // 2. Registra o histórico no empréstimo
+        if (loanLink.mode === 'existing') {
+          const loan = loans.find(l => l.id === loanLink.loanId);
+          if (loan) {
+            const isPayment = (tx.type === 'income' && loan.type === 'lent') || 
+                              (tx.type === 'expense' && loan.type === 'borrowed');
+            
+            if (isPayment) {
+              await payLoan(loan.id, tx.amount, tx.date, tx.description);
+            } else {
+              await addLoan({
+                type: loan.type,
+                counterpart: loan.counterpart,
+                title: loan.title,
+                amount: tx.amount,
+                date: tx.date,
+                dueDate: loan.dueDate || null,
+                description: tx.description
+              });
+            }
+          }
+        } else if (loanLink.mode === 'new') {
+          const newLoanType = tx.type === 'expense' ? 'lent' : 'borrowed';
+          await addLoan({
+            type: newLoanType,
+            counterpart: loanLink.loanCounterpart,
+            title: loanLink.loanTitle,
+            amount: tx.amount,
+            date: tx.date,
+            dueDate: loanLink.loanDueDate || null,
+            description: tx.description
           });
         }
         importedCount++;
@@ -240,6 +293,9 @@ export function OFXImport() {
     setSelectedTx({});
     setManualLinks({});
     setSelectingFitId(null);
+    setSplittingFitId(null);
+    setLinkingLoanFitId(null);
+    setLoanLinks({});
     setTxCategories({});
   };
 
@@ -366,6 +422,7 @@ export function OFXImport() {
               
               const manualLink = manualLinks[tx.fitId];
               const isNewSplit = manualLink && manualLink.isNewSplit;
+              const loanLink = loanLinks[tx.fitId];
 
               return (
                 <div
@@ -395,6 +452,8 @@ export function OFXImport() {
                       </span>
                       {isNewSplit
                         ? <Badge variant="warning">Desmembrado</Badge>
+                        : loanLink
+                        ? <Badge variant="purple">Empréstimo</Badge>
                         : isMultiLink
                         ? <Badge variant="warning">{activeMatches.length} vínculos</Badge>
                         : activeMatch
@@ -406,7 +465,44 @@ export function OFXImport() {
 
                   {/* Informações de Conciliação */}
                   <div className="reconciliation-info">
-                    {isNewSplit ? (
+                    {loanLink ? (
+                      // Vinculado a empréstimo
+                      <div className="rec-matched-container rec-loan-container">
+                        <div className="rec-match-details">
+                          <span className="rec-label rec-label-loan" style={{ color: 'var(--accent-purple, #a78bfa)' }}>Empréstimo:</span>
+                          <span className="rec-text-desc">
+                            {loanLink.mode === 'existing' ? (
+                              <>
+                                Vincular ao empréstimo existente de:{' '}
+                                <strong>{loans.find(l => l.id === loanLink.loanId)?.counterpart || 'Desconhecido'}</strong>
+                              </>
+                            ) : (
+                              <>
+                                Criar novo empréstimo para:{' '}
+                                <strong>{loanLink.loanCounterpart}</strong>
+                                {loanLink.loanTitle && ` (${loanLink.loanTitle})`}
+                              </>
+                            )}
+                          </span>
+                        </div>
+                        <div className="rec-actions">
+                          <button
+                            type="button"
+                            className="rec-action-btn unlink-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setLoanLinks(prev => {
+                                const next = { ...prev };
+                                delete next[tx.fitId];
+                                return next;
+                              });
+                            }}
+                          >
+                            Desvincular
+                          </button>
+                        </div>
+                      </div>
+                    ) : isNewSplit ? (
                       // Desmembrado em múltiplas categorias
                       <div className="rec-matched-container rec-split-container">
                         <div className="rec-match-details">
@@ -571,6 +667,14 @@ export function OFXImport() {
                           >
                             Dividir em categorias
                           </button>
+                          <span className="divider">|</span>
+                          <button
+                            type="button"
+                            className="rec-action-btn link-btn-text text-purple"
+                            onClick={(e) => { e.stopPropagation(); setLinkingLoanFitId(tx.fitId); }}
+                          >
+                            Vincular a empréstimo
+                          </button>
                         </div>
                       </div>
                     )}
@@ -648,6 +752,23 @@ export function OFXImport() {
             setSplittingFitId(null);
           }}
           onClose={() => setSplittingFitId(null)}
+        />
+      )}
+
+      {linkingLoanFitId && (
+        <OFXLoanLinkModal
+          ofxTx={parsed.transactions.find(t => t.fitId === linkingLoanFitId)}
+          loans={loans}
+          onConfirm={(loanLinkData) => {
+            setLoanLinks(prev => ({
+              ...prev,
+              [linkingLoanFitId]: loanLinkData
+            }));
+            // Limpa correspondências automáticas ou manuais caso o empréstimo seja vinculado
+            setManualLinks(prev => ({ ...prev, [linkingLoanFitId]: null }));
+            setLinkingLoanFitId(null);
+          }}
+          onClose={() => setLinkingLoanFitId(null)}
         />
       )}
 

@@ -36,12 +36,152 @@ const THEME_COLORS = [
 
 export function Settings() {
   const { user } = useAuth();
-  const { accounts, transactions, loans, hideValues, toggleHideValues } = useFinance();
+  const { 
+    accounts, transactions, loans, hideValues, toggleHideValues,
+    categories, categoryLimits, addCategory, deleteCategory, updateCategory, addCategoryLimit, deleteCategoryLimit 
+  } = useFinance();
   
   const [activeTab, setActiveTab] = useState('profile'); // 'profile', 'customization', 'backup', 'system'
   const [profileName, setProfileName] = useState(user?.name || 'Administrador');
   const [profileEmail, setProfileEmail] = useState(user?.email || 'admin@poupapila.com');
   const [currency, setCurrency] = useState('BRL');
+
+  // Para adicionar categoria
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatType, setNewCatType] = useState('expense');
+  const [newCatRuleType, setNewCatRuleType] = useState('want');
+  const [catError, setCatError] = useState('');
+  const [catSuccess, setCatSuccess] = useState('');
+
+  // Para adicionar limite
+  const [limitCategory, setLimitCategory] = useState('');
+  const [limitAmount, setLimitAmount] = useState('');
+  const [limitPeriod, setLimitPeriod] = useState('monthly');
+  const [limitThreshold, setLimitThreshold] = useState(80);
+  const [limitError, setLimitError] = useState('');
+  const [limitSuccess, setLimitSuccess] = useState('');
+
+  // Helper para verificar se uma transação pertence ao período do limite
+  const getStartOfWeek = () => {
+    const today = new Date();
+    const day = today.getDay();
+    const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+    const start = new Date(today.setDate(diff));
+    start.setHours(0,0,0,0);
+    return start;
+  };
+
+  const calculateSpent = (categoryName, period) => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const startOfWeek = getStartOfWeek();
+
+    return transactions
+      .filter(t => t.type === 'expense' && t.category.toLowerCase().trim() === categoryName.toLowerCase().trim())
+      .reduce((sum, t) => {
+        if (period === 'monthly') {
+          if (t.date.startsWith(`${year}-${month}`)) {
+            return sum + t.amount;
+          }
+        } else if (period === 'weekly') {
+          const tDate = new Date(t.date + 'T00:00:00');
+          const endOfWeek = new Date(startOfWeek);
+          endOfWeek.setDate(endOfWeek.getDate() + 7);
+          if (tDate >= startOfWeek && tDate < endOfWeek) {
+            return sum + t.amount;
+          }
+        } else {
+          return sum + t.amount;
+        }
+        return sum;
+      }, 0);
+  };
+
+  const handleCreateCategory = async (e) => {
+    e.preventDefault();
+    setCatError('');
+    setCatSuccess('');
+    if (!newCatName.trim()) return;
+
+    try {
+      await addCategory({ 
+        name: newCatName, 
+        type: newCatType, 
+        rule_type: newCatType === 'expense' ? newCatRuleType : null 
+      });
+      setCatSuccess('Categoria criada com sucesso!');
+      setNewCatName('');
+    } catch (err) {
+      setCatError(err.message || 'Erro ao criar categoria.');
+    }
+  };
+
+  const handleUpdateCategoryRuleType = async (id, rule_type) => {
+    setCatError('');
+    setCatSuccess('');
+    try {
+      await updateCategory(id, { rule_type });
+      setCatSuccess('Classificação da categoria atualizada!');
+    } catch (err) {
+      setCatError(err.message || 'Erro ao atualizar categoria.');
+    }
+  };
+
+  const handleDeleteCategory = async (id) => {
+    if (!confirm('Tem certeza que deseja remover esta categoria?')) return;
+    setCatError('');
+    setCatSuccess('');
+    try {
+      await deleteCategory(id);
+      setCatSuccess('Categoria removida com sucesso!');
+    } catch (err) {
+      setCatError(err.message || 'Erro ao remover categoria.');
+    }
+  };
+
+  const handleCreateLimit = async (e) => {
+    e.preventDefault();
+    setLimitError('');
+    setLimitSuccess('');
+    if (!limitCategory) {
+      setLimitError('Selecione uma categoria.');
+      return;
+    }
+    const parsedAmt = parseFloat(limitAmount);
+    if (isNaN(parsedAmt) || parsedAmt <= 0) {
+      setLimitError('Digite um valor limite válido.');
+      return;
+    }
+
+    try {
+      await addCategoryLimit({
+        category_name: limitCategory,
+        limit_amount: parsedAmt,
+        period: limitPeriod,
+        alert_threshold: parseFloat(limitThreshold)
+      });
+      setLimitSuccess('Limite de gastos salvo!');
+      setLimitAmount('');
+      setLimitCategory('');
+    } catch (err) {
+      setLimitError(err.message || 'Erro ao salvar limite.');
+    }
+  };
+
+  const handleDeleteLimit = async (id) => {
+    if (!confirm('Tem certeza que deseja remover este limite?')) return;
+    setLimitError('');
+    setLimitSuccess('');
+    try {
+      await deleteCategoryLimit(id);
+      setLimitSuccess('Limite removido com sucesso!');
+    } catch (err) {
+      setLimitError(err.message || 'Erro ao remover limite.');
+    }
+  };
+  
+
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem('poupa_pila_theme_mode') || 'dark';
     if (saved === 'light') {
@@ -270,6 +410,13 @@ export function Settings() {
         >
           <Users size={18} />
           <span>Controle de Acesso</span>
+        </button>
+        <button 
+          className={`settings-tab-btn ${activeTab === 'categories_limits' ? 'active' : ''}`}
+          onClick={() => setActiveTab('categories_limits')}
+        >
+          <LayoutGrid size={18} />
+          <span>Categorias & Limites</span>
         </button>
       </div>
 
@@ -646,6 +793,359 @@ export function Settings() {
                   ))}
                 </div>
               )}
+            </GlassCard>
+          </div>
+        )}
+
+        {activeTab === 'categories_limits' && (
+          <div className="tab-pane-grid">
+            {/* Coluna 1: Gerenciar Categorias */}
+            <GlassCard className="settings-card animate-fade-in">
+              <div className="card-header-icon">
+                <LayoutGrid size={20} className="text-emerald" />
+                <h3>Gerenciar Categorias</h3>
+              </div>
+              <p className="card-description">
+                Crie e gerencie as categorias para classificar suas receitas e despesas.
+              </p>
+
+              <form onSubmit={handleCreateCategory} className="settings-form" style={{ marginBottom: '24px' }}>
+                {catError && <div className="access-banner access-banner--error">{catError}</div>}
+                {catSuccess && <div className="access-banner access-banner--success">{catSuccess}</div>}
+
+                <div className="form-group">
+                  <label>Nome da Categoria</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="Ex: Assinaturas, Mercado"
+                    value={newCatName}
+                    onChange={e => setNewCatName(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Tipo de Transação</label>
+                  <div className="theme-toggle-group" style={{ width: 'fit-content' }}>
+                    <button
+                      type="button"
+                      className={`theme-btn ${newCatType === 'expense' ? 'active' : ''}`}
+                      onClick={() => setNewCatType('expense')}
+                    >
+                      Despesa
+                    </button>
+                    <button
+                      type="button"
+                      className={`theme-btn ${newCatType === 'income' ? 'active' : ''}`}
+                      onClick={() => setNewCatType('income')}
+                    >
+                      Receita
+                    </button>
+                  </div>
+                </div>
+
+                {newCatType === 'expense' && (
+                  <div className="form-group animate-fade-in" style={{ marginTop: '12px' }}>
+                    <label>Regra 50/30/20 (Classificação)</label>
+                    <div className="theme-toggle-group" style={{ width: '100%', display: 'flex', gap: '4px', padding: '3px' }}>
+                      <button
+                        type="button"
+                        className={`theme-btn ${newCatRuleType === 'necessity' ? 'active' : ''}`}
+                        onClick={() => setNewCatRuleType('necessity')}
+                        style={{ flex: 1, justifyContent: 'center', fontSize: '0.8rem', padding: '6px 4px' }}
+                      >
+                        Necessidade (50%)
+                      </button>
+                      <button
+                        type="button"
+                        className={`theme-btn ${newCatRuleType === 'want' ? 'active' : ''}`}
+                        onClick={() => setNewCatRuleType('want')}
+                        style={{ flex: 1, justifyContent: 'center', fontSize: '0.8rem', padding: '6px 4px' }}
+                      >
+                        Desejo (30%)
+                      </button>
+                      <button
+                        type="button"
+                        className={`theme-btn ${newCatRuleType === 'investment' ? 'active' : ''}`}
+                        onClick={() => setNewCatRuleType('investment')}
+                        style={{ flex: 1, justifyContent: 'center', fontSize: '0.8rem', padding: '6px 4px' }}
+                      >
+                        Investimento (20%)
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <Button type="submit" variant="primary">Adicionar Categoria</Button>
+              </form>
+
+              <div className="categories-list-container">
+                <h4 className="section-subtitle">Categorias Ativas</h4>
+                <div className="categories-list-scroll mt-12" style={{ maxHeight: '300px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {categories.length === 0 ? (
+                     <p className="text-muted" style={{ fontSize: '0.85rem' }}>Nenhuma categoria cadastrada.</p>
+                  ) : (
+                    categories.map(cat => (
+                      <div key={cat.id} className="category-item-row" style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '10px 14px',
+                        background: 'rgba(255, 255, 255, 0.02)',
+                        border: '1px solid rgba(255, 255, 255, 0.04)',
+                        borderRadius: '10px'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{
+                            width: '6px',
+                            height: '6px',
+                            borderRadius: '50%',
+                            background: cat.type === 'income' ? 'var(--accent-emerald, #10b981)' : 'var(--accent-coral, #f43f5e)'
+                          }}></span>
+                          <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>{cat.name}</span>
+                          <span style={{
+                            fontSize: '0.7rem',
+                            padding: '1px 6px',
+                            borderRadius: '6px',
+                            background: cat.type === 'income' ? 'rgba(16, 185, 129, 0.08)' : 'rgba(244, 63, 94, 0.08)',
+                            color: cat.type === 'income' ? 'var(--accent-emerald)' : 'var(--accent-coral)',
+                            fontWeight: '600'
+                          }}>
+                            {cat.type === 'income' ? 'Receita' : 'Despesa'}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          {cat.type === 'expense' && (
+                            <select
+                              value={cat.rule_type || 'want'}
+                              onChange={(e) => handleUpdateCategoryRuleType(cat.id, e.target.value)}
+                              style={{
+                                background: 'rgba(255, 255, 255, 0.03)',
+                                border: '1px solid rgba(255, 255, 255, 0.08)',
+                                color: 'var(--text-secondary)',
+                                borderRadius: '6px',
+                                padding: '2px 8px',
+                                fontSize: '0.75rem',
+                                cursor: 'pointer',
+                                outline: 'none'
+                              }}
+                              className="form-input-select"
+                            >
+                              <option value="necessity">Necessidade (50%)</option>
+                              <option value="want">Desejo/Lazer (30%)</option>
+                              <option value="investment">Investimento (20%)</option>
+                            </select>
+                          )}
+
+                          {['Empréstimo', 'Recebimento de Empréstimo', 'Salário', 'Despesa', 'Receita'].includes(cat.name) ? (
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', width: '32px', textAlign: 'center' }}>Padrão</span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCategory(cat.id)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--accent-coral, #f43f5e)',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '4px',
+                                borderRadius: '4px'
+                              }}
+                              className="revoke-btn"
+                              title="Excluir Categoria"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </GlassCard>
+
+            {/* Coluna 2: Limites de Gastos & Alertas */}
+            <GlassCard className="settings-card animate-fade-in">
+              <div className="card-header-icon">
+                <AlertTriangle size={20} className="text-coral" />
+                <h3>Limites & Alertas</h3>
+              </div>
+              <p className="card-description">
+                Defina limites para controle de despesas e seja alertado ao atingir a porcentagem desejada.
+              </p>
+
+              <form onSubmit={handleCreateLimit} className="settings-form" style={{ marginBottom: '24px' }}>
+                {limitError && <div className="access-banner access-banner--error">{limitError}</div>}
+                {limitSuccess && <div className="access-banner access-banner--success">{limitSuccess}</div>}
+
+                <div className="form-row" style={{ display: 'flex', gap: '12px' }}>
+                  <div className="form-group flex-1">
+                    <label>Categoria de Despesa</label>
+                    <CustomSelect
+                      value={limitCategory}
+                      onChange={e => setLimitCategory(e.target.value)}
+                      options={[
+                        { value: '', label: 'Selecione...' },
+                        ...categories
+                          .filter(c => c.type === 'expense')
+                          .map(c => ({ value: c.name, label: c.name }))
+                      ]}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="form-group flex-1">
+                    <label>Período</label>
+                    <CustomSelect
+                      value={limitPeriod}
+                      onChange={e => setLimitPeriod(e.target.value)}
+                      options={[
+                        { value: 'weekly', label: 'Semanal' },
+                        { value: 'monthly', label: 'Mensal' },
+                        { value: 'total', label: 'Total Acumulado' }
+                      ]}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row mt-12" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <div className="form-group flex-1">
+                    <label>Valor Limite (R$)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      className="form-input"
+                      placeholder="Ex: 500.00"
+                      value={limitAmount}
+                      onChange={e => setLimitAmount(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group flex-1">
+                    <label>Alerta ao atingir (%): {limitThreshold}%</label>
+                    <input
+                      type="range"
+                      min="50"
+                      max="100"
+                      step="5"
+                      value={limitThreshold}
+                      onChange={e => setLimitThreshold(e.target.value)}
+                      style={{ accentColor: 'var(--accent-emerald)' }}
+                    />
+                  </div>
+                </div>
+
+                <Button type="submit" variant="primary">Salvar Limite</Button>
+              </form>
+
+              <div className="limits-list-container">
+                <h4 className="section-subtitle">Limites Configurados</h4>
+                <div className="limits-list-scroll mt-12" style={{ maxHeight: '300px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {categoryLimits.length === 0 ? (
+                    <p className="text-muted" style={{ fontSize: '0.85rem' }}>Nenhum limite configurado.</p>
+                  ) : (
+                    categoryLimits.map(lim => {
+                      const spent = calculateSpent(lim.category_name, lim.period);
+                      const percentage = lim.limit_amount > 0 ? (spent / lim.limit_amount) * 100 : 0;
+                      const thresholdReached = percentage >= lim.alert_threshold;
+                      const limitExceeded = percentage >= 100;
+
+                      let progressColor = 'var(--accent-emerald, #10b981)'; // green
+                      if (limitExceeded) {
+                        progressColor = 'var(--accent-coral, #f43f5e)'; // red
+                      } else if (thresholdReached) {
+                        progressColor = 'var(--accent-amber, #f59e0b)'; // yellow
+                      }
+
+                      return (
+                        <div key={lim.id} className="limit-item-card" style={{
+                          padding: '14px',
+                          background: 'rgba(255, 255, 255, 0.01)',
+                          border: '1px solid rgba(255, 255, 255, 0.03)',
+                          borderRadius: '12px'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', alignItems: 'center' }}>
+                            <div>
+                              <strong style={{ fontSize: '0.92rem', color: 'var(--text-primary)' }}>{lim.category_name}</strong>
+                              <span style={{
+                                fontSize: '0.7rem',
+                                marginLeft: '8px',
+                                padding: '1px 6px',
+                                borderRadius: '6px',
+                                background: 'rgba(255, 255, 255, 0.06)',
+                                color: 'var(--text-secondary)',
+                                textTransform: 'uppercase'
+                              }}>
+                                {lim.period === 'monthly' ? 'Mensal' : lim.period === 'weekly' ? 'Semanal' : 'Total'}
+                              </span>
+                            </div>
+                            
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteLimit(lim.id)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--accent-coral, #f43f5e)',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '4px',
+                                borderRadius: '4px'
+                              }}
+                              className="revoke-btn"
+                              title="Excluir Limite"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                            <span>Gasto: R$ {spent.toFixed(2)} / R$ {lim.limit_amount.toFixed(2)}</span>
+                            <span style={{ fontWeight: '600', color: progressColor }}>
+                              {percentage.toFixed(0)}%
+                            </span>
+                          </div>
+
+                          {/* Progresso */}
+                          <div style={{
+                            width: '100%',
+                            height: '6px',
+                            background: 'rgba(255, 255, 255, 0.06)',
+                            borderRadius: '3px',
+                            overflow: 'hidden',
+                            marginBottom: '6px'
+                          }}>
+                            <div style={{
+                              width: `${Math.min(percentage, 100)}%`,
+                              height: '100%',
+                              background: progressColor,
+                              borderRadius: '3px',
+                              transition: 'width 0.3s ease'
+                            }}></div>
+                          </div>
+
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Alerta em {lim.alert_threshold}%</span>
+                            {limitExceeded ? (
+                              <span style={{ fontSize: '0.72rem', color: 'var(--accent-coral)', fontWeight: '600' }}>Excedido!</span>
+                            ) : thresholdReached ? (
+                              <span style={{ fontSize: '0.72rem', color: 'var(--accent-amber)', fontWeight: '600' }}>Limite próximo</span>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
             </GlassCard>
           </div>
         )}

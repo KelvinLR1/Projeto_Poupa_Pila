@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
   Eye, EyeOff, LayoutDashboard, Receipt, HandCoins, Wallet,
   FileInput, LogOut, KeyRound, TrendingUp, Settings, Menu, X,
-  MoreHorizontal
+  MoreHorizontal, BarChart2
 } from 'lucide-react';
 import './Layout.css';
 
@@ -12,6 +12,7 @@ import './Layout.css';
 const ALL_NAV_ITEMS = [
   { id: 'dashboard',    label: 'Visão Geral',    icon: <LayoutDashboard size={20} /> },
   { id: 'transactions', label: 'Extrato',         icon: <Receipt size={20} /> },
+  { id: 'analytics',    label: 'Análises',        icon: <BarChart2 size={20} /> },
   { id: 'cashflow',     label: 'Fluxo',           icon: <TrendingUp size={20} /> },
   { id: 'loans',        label: 'Empréstimos',     icon: <HandCoins size={20} /> },
   { id: 'accounts',     label: 'Contas',          icon: <Wallet size={20} /> },
@@ -66,7 +67,7 @@ export function Layout({ children, activeTab, setActiveTab }) {
         </div>
 
         <nav className="sidebar-nav">
-          {ALL_NAV_ITEMS.slice(0, 6).map(item => (
+          {ALL_NAV_ITEMS.slice(0, 7).map(item => (
             <button
               key={item.id}
               className={`nav-item ${activeTab === item.id ? 'active' : ''}`}

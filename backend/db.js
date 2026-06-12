@@ -161,10 +161,110 @@ try {
   // Column already exists, safe to ignore
 }
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS categories (
+    id TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    rule_type TEXT,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+  );
+`);
+
+try {
+  db.exec('ALTER TABLE categories ADD COLUMN rule_type TEXT');
+  // Pre-populate existing categories based on keywords to avoid empty ones for existing users
+  db.exec(`
+    UPDATE categories 
+    SET rule_type = 'necessity' 
+    WHERE rule_type IS NULL 
+      AND type = 'expense' 
+      AND (
+        LOWER(name) LIKE '%alimentação%' OR 
+        LOWER(name) LIKE '%moradia%' OR 
+        LOWER(name) LIKE '%transporte%' OR 
+        LOWER(name) LIKE '%saúde%' OR 
+        LOWER(name) LIKE '%educação%' OR 
+        LOWER(name) LIKE '%contas%'
+      )
+  `);
+  db.exec(`
+    UPDATE categories 
+    SET rule_type = 'investment' 
+    WHERE rule_type IS NULL 
+      AND type = 'expense' 
+      AND (
+        LOWER(name) LIKE '%investimento%' OR 
+        LOWER(name) LIKE '%poupança%' OR 
+        LOWER(name) LIKE '%reserva%' OR 
+        LOWER(name) LIKE '%ações%' OR 
+        LOWER(name) LIKE '%tesouro%'
+      )
+  `);
+  db.exec(`
+    UPDATE categories 
+    SET rule_type = 'want' 
+    WHERE rule_type IS NULL 
+      AND type = 'expense'
+  `);
+} catch (e) {
+  // Column already exists, safe to ignore
+}
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS category_limits (
+    id TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    category_name TEXT NOT NULL,
+    limit_amount REAL NOT NULL,
+    period TEXT NOT NULL,
+    alert_threshold REAL NOT NULL DEFAULT 80.0,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+  );
+`);
+
+function seedUserCategories(userId) {
+  try {
+    const checkCount = db.prepare('SELECT COUNT(*) as count FROM categories WHERE user_id = ?');
+    const result = checkCount.all(userId)[0];
+    if (result && result.count === 0) {
+      const insert = db.prepare('INSERT INTO categories (id, user_id, name, type, rule_type) VALUES (?, ?, ?, ?, ?)');
+      const defaults = [
+        // Receitas (incomes)
+        { name: 'Salário', type: 'income', rule_type: null },
+        { name: 'Investimentos', type: 'income', rule_type: null },
+        { name: 'Presentes', type: 'income', rule_type: null },
+        { name: 'Receita', type: 'income', rule_type: null },
+        { name: 'Recebimento de Empréstimo', type: 'income', rule_type: null },
+        // Despesas (expenses)
+        { name: 'Alimentação', type: 'expense', rule_type: 'necessity' },
+        { name: 'Moradia', type: 'expense', rule_type: 'necessity' },
+        { name: 'Transporte', type: 'expense', rule_type: 'necessity' },
+        { name: 'Lazer', type: 'expense', rule_type: 'want' },
+        { name: 'Saúde', type: 'expense', rule_type: 'necessity' },
+        { name: 'Educação', type: 'expense', rule_type: 'necessity' },
+        { name: 'Despesa', type: 'expense', rule_type: 'want' },
+        { name: 'Empréstimo', type: 'expense', rule_type: 'want' },
+        { name: 'Outros', type: 'expense', rule_type: 'want' }
+      ];
+      defaults.forEach(cat => {
+        const catId = Math.random().toString(36).substr(2, 9);
+        insert.run(catId, userId, cat.name, cat.type, cat.rule_type);
+      });
+    }
+  } catch (err) {
+    console.error('Erro ao semear categorias para o usuário:', err);
+  }
+}
+
 /**
  * Popula a conta de um novo usuário com os dados padrão originais do mockup.
  */
 function seedDefaultData(userId, isClean = false) {
+  // Inicializa as categorias
+  seedUserCategories(userId);
+
   // ─── contas ───
   const insertAccount = db.prepare(`
     INSERT INTO accounts (id, user_id, name, type, balance, color, active)
@@ -257,5 +357,6 @@ function seedDefaultData(userId, isClean = false) {
 
 module.exports = {
   db,
-  seedDefaultData
+  seedDefaultData,
+  seedUserCategories
 };

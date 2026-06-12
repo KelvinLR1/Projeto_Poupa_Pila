@@ -11,6 +11,15 @@ export function TransactionDetailsModal({ transaction, onCancel, onPayRemaining,
   const [isClosing, setIsClosing] = React.useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = React.useState(null);
   const [removingId, setRemovingId] = React.useState(null);
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(false);
+    const timer = setTimeout(() => {
+      setIsMounted(true);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, []);
 
   React.useEffect(() => {
     if (transaction) {
@@ -30,15 +39,20 @@ export function TransactionDetailsModal({ transaction, onCancel, onPayRemaining,
   };
 
   const handleDeleteSettlement = async (settlementId) => {
-    setConfirmDeleteId(null);
     setRemovingId(settlementId);
-    // Aguarda a animação de saída antes de chamar o backend
+    // Aguarda a animação de saída (380ms no CSS) antes de chamar o backend
     setTimeout(async () => {
-      if (onDeleteSettlement) {
-        await onDeleteSettlement(transaction.id, settlementId);
+      try {
+        if (onDeleteSettlement) {
+          await onDeleteSettlement(transaction.id, settlementId);
+        }
+      } catch (error) {
+        console.error("Erro ao excluir baixa:", error);
+      } finally {
+        setRemovingId(null);
+        setConfirmDeleteId(null);
       }
-      setRemovingId(null);
-    }, 340);
+    }, 380);
   };
 
   const settlements = transaction.settlements || [];
@@ -129,16 +143,16 @@ export function TransactionDetailsModal({ transaction, onCancel, onPayRemaining,
             </h4>
 
             {settlements.length === 0 ? (
-              <div className="tx-timeline-empty">
+              <div className={`tx-timeline-empty ${!isMounted ? 'no-transition' : ''}`}>
                 Nenhum pagamento registrado ainda.
               </div>
             ) : (
               <div className="tx-timeline">
                 {settlements.map((s, idx) => (
                   <div key={s.id} className={`tx-timeline-slot${removingId === s.id ? ' removing' : ''}`}>
+                    <div className={`tx-timeline-dot ${idx === settlements.length - 1 ? 'dot-active' : ''}`} />
                     <div className="tx-timeline-slot-inner">
                       <div className="tx-timeline-item">
-                        <div className={`tx-timeline-dot ${idx === settlements.length - 1 ? 'dot-active' : ''}`} />
                         <div className="tx-timeline-content">
                           <div className="tx-timeline-row">
                             <strong>Baixa {idx + 1}</strong>
@@ -167,27 +181,29 @@ export function TransactionDetailsModal({ transaction, onCancel, onPayRemaining,
                           </div>
                           <p className="tx-timeline-date">{formatDate(s.date)}</p>
 
-                          {/* Confirmação inline */}
-                          {confirmDeleteId === s.id && (
-                            <div className="tx-settlement-confirm">
-                              <AlertTriangle size={13} style={{ color: 'var(--accent-gold)', flexShrink: 0 }} />
-                              <span>Excluir esta baixa e restaurar o saldo?</span>
-                              <div className="tx-settlement-confirm-btns">
-                                <button
-                                  className="tx-confirm-btn tx-confirm-yes"
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteSettlement(s.id); }}
-                                >
-                                  Sim
-                                </button>
-                                <button
-                                  className="tx-confirm-btn tx-confirm-no"
-                                  onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
-                                >
-                                  Não
-                                </button>
+                          {/* Confirmação inline com transição suave */}
+                          <div className={`tx-settlement-confirm-wrapper ${confirmDeleteId === s.id ? 'open' : ''}`}>
+                            <div className="tx-settlement-confirm-inner">
+                              <div className="tx-settlement-confirm">
+                                <AlertTriangle size={13} style={{ color: 'var(--accent-gold)', flexShrink: 0 }} />
+                                <span>Excluir esta baixa e restaurar o saldo?</span>
+                                <div className="tx-settlement-confirm-btns">
+                                  <button
+                                    className="tx-confirm-btn tx-confirm-yes"
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteSettlement(s.id); }}
+                                  >
+                                    Sim
+                                  </button>
+                                  <button
+                                    className="tx-confirm-btn tx-confirm-no"
+                                    onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
+                                  >
+                                    Não
+                                  </button>
+                                </div>
                               </div>
                             </div>
-                          )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -201,20 +217,16 @@ export function TransactionDetailsModal({ transaction, onCancel, onPayRemaining,
 
         {/* Footer */}
         <div className="modal-footer">
-          {remaining > 0 ? (
-            <>
-              <Button variant="secondary" onClick={handleClose}>Fechar</Button>
-              <Button
-                variant="primary"
-                icon={<Check size={16} />}
-                onClick={() => onPayRemaining(transaction)}
-              >
-                Pagar Restante ({formatCurrency(remaining)})
-              </Button>
-            </>
-          ) : (
-            <Button variant="secondary" onClick={handleClose}>Fechar</Button>
-          )}
+          <Button variant="secondary" onClick={handleClose}>Fechar</Button>
+          <div className={`tx-pay-remaining-wrapper ${remaining > 0 ? 'visible' : ''} ${!isMounted ? 'no-transition' : ''}`}>
+            <Button
+              variant="primary"
+              icon={<Check size={16} />}
+              onClick={() => onPayRemaining(transaction)}
+            >
+              Pagar Restante ({formatCurrency(remaining)})
+            </Button>
+          </div>
         </div>
       </div>
     </div>,

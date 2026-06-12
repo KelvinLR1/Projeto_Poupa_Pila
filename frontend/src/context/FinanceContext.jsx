@@ -9,6 +9,8 @@ export function FinanceProvider({ children }) {
   const [accounts, setAccounts] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [loans, setLoans] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [categoryLimits, setCategoryLimits] = useState([]);
   const [hideValues, setHideValues] = useState(false);
 
   const toggleHideValues = () => setHideValues(prev => !prev);
@@ -32,6 +34,8 @@ export function FinanceProvider({ children }) {
         setAccounts(data.accounts || []);
         setTransactions(data.transactions || []);
         setLoans(data.loans || []);
+        setCategories(data.categories || []);
+        setCategoryLimits(data.categoryLimits || []);
       }
     } catch (e) {
       console.error('Erro ao buscar dados financeiros do backend:', e);
@@ -47,6 +51,8 @@ export function FinanceProvider({ children }) {
       setAccounts([]);
       setTransactions([]);
       setLoans([]);
+      setCategories([]);
+      setCategoryLimits([]);
     }
   }, [isAuthenticated, token]);
 
@@ -231,11 +237,119 @@ export function FinanceProvider({ children }) {
     return null;
   };
 
+  const addCategory = async (newCat) => {
+    try {
+      const res = await fetch('/api/finance/categories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(newCat)
+      });
+      if (res.ok) {
+        await fetchFinanceData();
+      } else {
+        const data = await res.json();
+        throw new Error(data.error || 'Erro ao adicionar categoria');
+      }
+    } catch (e) {
+      console.error('Erro ao adicionar categoria:', e);
+      throw e;
+    }
+  };
+
+  const deleteCategory = async (id) => {
+    try {
+      const res = await fetch(`/api/finance/categories/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        await fetchFinanceData();
+      } else {
+        const data = await res.json();
+        throw new Error(data.error || 'Erro ao deletar categoria');
+      }
+    } catch (e) {
+      console.error('Erro ao deletar categoria:', e);
+      throw e;
+    }
+  };
+
+  const updateCategory = async (id, updatedFields) => {
+    try {
+      const res = await fetch(`/api/finance/categories/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(updatedFields)
+      });
+      if (res.ok) {
+        await fetchFinanceData();
+      } else {
+        const data = await res.json();
+        throw new Error(data.error || 'Erro ao atualizar categoria');
+      }
+    } catch (e) {
+      console.error('Erro ao atualizar categoria:', e);
+      throw e;
+    }
+  };
+
+  const addCategoryLimit = async (newLimit) => {
+    try {
+      const res = await fetch('/api/finance/category-limits', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(newLimit)
+      });
+      if (res.ok) {
+        await fetchFinanceData();
+      } else {
+        const data = await res.json();
+        throw new Error(data.error || 'Erro ao salvar limite');
+      }
+    } catch (e) {
+      console.error('Erro ao salvar limite de gastos:', e);
+      throw e;
+    }
+  };
+
+  const deleteCategoryLimit = async (id) => {
+    try {
+      const res = await fetch(`/api/finance/category-limits/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        await fetchFinanceData();
+      } else {
+        const data = await res.json();
+        throw new Error(data.error || 'Erro ao deletar limite');
+      }
+    } catch (e) {
+      console.error('Erro ao deletar limite de gastos:', e);
+      throw e;
+    }
+  };
+
   return (
     <FinanceContext.Provider value={{
       accounts,
       transactions,
       loans,
+      categories,
+      categoryLimits,
       hideValues,
       toggleHideValues,
       totalBalance,
@@ -248,7 +362,12 @@ export function FinanceProvider({ children }) {
       payLoan,
       toggleLoanType,
       deleteLoanHistoryItem,
-      deleteSettlement
+      deleteSettlement,
+      addCategory,
+      deleteCategory,
+      updateCategory,
+      addCategoryLimit,
+      deleteCategoryLimit
     }}>
       {children}
     </FinanceContext.Provider>

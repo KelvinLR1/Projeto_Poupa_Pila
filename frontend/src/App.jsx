@@ -10,6 +10,7 @@ import { CashFlow } from './pages/CashFlow/CashFlow'
 import { useAuth } from './context/AuthContext'
 import { Login } from './pages/Login/Login'
 import { Settings } from './pages/Settings/Settings'
+import { Analytics } from './pages/Analytics/Analytics'
 
 function App() {
   const { isAuthenticated, loading } = useAuth()
@@ -46,6 +47,7 @@ function App() {
       {activeTab === 'loans' && <Loans />}
       {activeTab === 'cashflow' && <CashFlow />}
       {activeTab === 'accounts' && <Accounts />}
+      {activeTab === 'analytics' && <Analytics />}
       {activeTab === 'ofx' && <OFXImport />}
       {activeTab === 'vault' && <Vault />}
       {activeTab === 'settings' && <Settings />}

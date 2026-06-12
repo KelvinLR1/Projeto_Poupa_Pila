@@ -153,11 +153,21 @@
   margin: 0;
 }
 
+@keyframes empty-state-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 .tx-timeline-empty {
   font-size: 0.875rem;
   color: var(--text-muted);
   font-style: italic;
   padding: 12px 0;
+  animation: empty-state-in 340ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.tx-timeline-empty.no-transition {
+  animation: none !important;
 }
 
 .tx-timeline {
@@ -181,6 +191,7 @@
 
 /* ── Slot wrapper — técnica grid collapse para animar altura ── */
 .tx-timeline-slot {
+  position: relative;
   display: grid;
   grid-template-rows: 1fr;
   margin-bottom: 10px;
@@ -203,8 +214,11 @@
 
 /* Inner wrapper obrigatório para o grid collapse funcionar */
 .tx-timeline-slot-inner {
-  overflow: hidden;
   min-height: 0;
+}
+
+.tx-timeline-slot.removing .tx-timeline-slot-inner {
+  overflow: hidden;
 }
 
 /* O item em si — apenas layout, sem animação de remoção aqui */
@@ -303,6 +317,21 @@
   100% { opacity: 1; transform: translateY(0)      scale(1);    }
 }
 
+.tx-settlement-confirm-wrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 280ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tx-settlement-confirm-wrapper.open {
+  grid-template-rows: 1fr;
+}
+
+.tx-settlement-confirm-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
 .tx-settlement-confirm {
   display: flex;
   align-items: center;
@@ -316,6 +345,9 @@
   color: var(--text-secondary);
   flex-wrap: wrap;
   transform-origin: top center;
+}
+
+.tx-settlement-confirm-wrapper.open .tx-settlement-confirm {
   animation: tx-confirm-in 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
@@ -355,5 +387,28 @@
 .tx-confirm-no:hover {
   background: rgba(255, 255, 255, 0.1);
   color: var(--text-primary);
+}
+
+.tx-pay-remaining-wrapper {
+  display: inline-flex;
+  max-width: 0;
+  opacity: 0;
+  transform: scale(0.9);
+  overflow: hidden;
+  white-space: nowrap;
+  transition:
+    max-width 380ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity   240ms ease,
+    transform 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.tx-pay-remaining-wrapper.visible {
+  max-width: 320px;
+  opacity: 1;
+  transform: scale(1);
+}
+
+.tx-pay-remaining-wrapper.no-transition {
+  transition: none !important;
 }
 

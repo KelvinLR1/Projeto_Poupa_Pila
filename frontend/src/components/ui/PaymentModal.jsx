@@ -8,6 +8,7 @@ import { CustomDatePicker } from './CustomDatePicker';
 import './PaymentModal.css';
 
 export function PaymentModal({ transaction, onConfirm, onCancel, loans = [] }) {
+  const [isClosing, setIsClosing] = useState(false);
   const settlements = transaction.settlements || [];
   const alreadyPaid = settlements.reduce((acc, s) => acc + s.amount, 0);
   const remaining = transaction.amount - alreadyPaid;
@@ -48,22 +49,32 @@ export function PaymentModal({ transaction, onConfirm, onCancel, loans = [] }) {
     setAmount(maskCurrencyBRL(newRemaining));
   };
 
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      onCancel();
+    }, 180);
+  };
+
   const handleConfirm = () => {
     if (!isValid) return;
-    onConfirm({
-      transaction,
-      paidAmount: parsedAmount,
-      actualAmount: isForecast ? parsedActualAmount : null,
-      asLoan,
-      loanId: asLoan && loanMode === 'existing' ? selectedLoanId : null,
-      loanCounterpart: asLoan && loanMode === 'new' ? loanCounterpart : null,
-      loanDueDate: asLoan && loanMode === 'new' ? loanDueDate : null,
-      loanTitle: asLoan && loanMode === 'new' ? loanTitle : null
-    });
+    setIsClosing(true);
+    setTimeout(() => {
+      onConfirm({
+        transaction,
+        paidAmount: parsedAmount,
+        actualAmount: isForecast ? parsedActualAmount : null,
+        asLoan,
+        loanId: asLoan && loanMode === 'existing' ? selectedLoanId : null,
+        loanCounterpart: asLoan && loanMode === 'new' ? loanCounterpart : null,
+        loanDueDate: asLoan && loanMode === 'new' ? loanDueDate : null,
+        loanTitle: asLoan && loanMode === 'new' ? loanTitle : null
+      });
+    }, 180);
   };
 
   return createPortal(
-    <div className="modal-overlay" onClick={onCancel}>
+    <div className={`modal-overlay ${isClosing ? 'closing' : ''}`} onClick={handleClose}>
       <div className="modal-container animate-slide-up" onClick={(e) => e.stopPropagation()}>
         
         <div className="modal-header">
@@ -71,7 +82,7 @@ export function PaymentModal({ transaction, onConfirm, onCancel, loans = [] }) {
             <h3>Dar Baixa no Lançamento</h3>
             <p>{transaction.description}</p>
           </div>
-          <button className="close-btn" onClick={onCancel} title="Fechar">
+          <button className="close-btn" onClick={handleClose} title="Fechar">
             <X size={18} />
           </button>
         </div>
@@ -263,7 +274,7 @@ export function PaymentModal({ transaction, onConfirm, onCancel, loans = [] }) {
         </div>
 
         <div className="modal-footer">
-          <Button variant="secondary" onClick={onCancel}>Cancelar</Button>
+          <Button variant="secondary" onClick={handleClose}>Cancelar</Button>
           <Button
             variant="success"
             icon={isPartial ? <Split size={18} /> : <Check size={18} />}

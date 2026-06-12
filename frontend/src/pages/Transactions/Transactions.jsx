@@ -30,9 +30,11 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all'); // 'all', 'payable', 'receivable'
   const [selectedTxForPayment, setSelectedTxForPayment] = useState(null);
-  const [selectedTxForDetails, setSelectedTxForDetails] = useState(null);
+  const [selectedTxForDetailsId, setSelectedTxForDetailsId] = useState(null);
   const [isAddingTransaction, setIsAddingTransaction] = useState(false);
   const [visibleCount, setVisibleCount] = useState(20);
+
+  const selectedTxForDetails = transactions.find(t => t.id === selectedTxForDetailsId) || null;
 
   const initialDates = getInitialDates();
   const [startDate, setStartDate] = useState(initialDates.start);
@@ -80,7 +82,6 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
   };
 
   const handlePayRemaining = (transaction) => {
-    setSelectedTxForDetails(null);
     setSelectedTxForPayment(transaction);
   };
 
@@ -208,7 +209,7 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
                key={tx.id} 
                className="transaction-item" 
                style={{ cursor: 'pointer' }}
-               onClick={() => setSelectedTxForDetails(tx)}
+               onClick={() => setSelectedTxForDetailsId(tx.id)}
              >
               <div className="tx-icon glass">
                 {tx.type === 'income' ? (
@@ -274,6 +275,16 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
         </div>
       </GlassCard>
 
+      <TransactionDetailsModal
+        key={selectedTxForDetailsId || 'closed'}
+        transaction={selectedTxForDetails}
+        onCancel={() => setSelectedTxForDetailsId(null)}
+        onPayRemaining={handlePayRemaining}
+        onDeleteSettlement={async (txId, settlementId) => {
+          await deleteSettlement(settlementId);
+        }}
+      />
+
       {selectedTxForPayment && (
         <PaymentModal
           transaction={selectedTxForPayment}
@@ -282,27 +293,6 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
           loans={loans}
         />
       )}
-
-      <TransactionDetailsModal
-        transaction={selectedTxForDetails}
-        onCancel={() => setSelectedTxForDetails(null)}
-        onPayRemaining={handlePayRemaining}
-        onDeleteSettlement={async (txId, settlementId) => {
-          const result = await deleteSettlement(settlementId);
-          if (result) {
-            setSelectedTxForDetails(prev => {
-              if (prev && prev.id === txId) {
-                return {
-                  ...prev,
-                  status: result.status,
-                  settlements: result.settlements
-                };
-              }
-              return prev;
-            });
-          }
-        }}
-      />
 
       {isAddingTransaction && (
         <TransactionFormDrawer onClose={() => setIsAddingTransaction(false)} />
