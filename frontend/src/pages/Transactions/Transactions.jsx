@@ -26,9 +26,10 @@ const getInitialDates = () => {
 };
 
 export function Transactions({ filterAccountId, setFilterAccountId }) {
-  const { transactions, accounts, loans, hideValues, markTransactionAsPaid, deleteSettlement } = useFinance();
+  const { transactions, accounts, loans, hideValues, markTransactionAsPaid, deleteSettlement, categories } = useFinance();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all'); // 'all', 'payable', 'receivable'
+  const [filterCategory, setFilterCategory] = useState('all');
   const [selectedTxForPayment, setSelectedTxForPayment] = useState(null);
   const [selectedTxForDetailsId, setSelectedTxForDetailsId] = useState(null);
   const [isAddingTransaction, setIsAddingTransaction] = useState(false);
@@ -39,10 +40,11 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
   const initialDates = getInitialDates();
   const [startDate, setStartDate] = useState(initialDates.start);
   const [endDate, setEndDate] = useState(initialDates.end);
+  const [ignoreDate, setIgnoreDate] = useState(false);
 
   useEffect(() => {
     setVisibleCount(20);
-  }, [searchTerm, filterAccountId, activeTab, startDate, endDate]);
+  }, [searchTerm, filterAccountId, activeTab, startDate, endDate, filterCategory, ignoreDate]);
 
   const allRef = useRef(null);
   const payableRef = useRef(null);
@@ -85,6 +87,13 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
     setSelectedTxForPayment(transaction);
   };
 
+  const uniqueCategories = Array.from(
+    new Set([
+      ...(categories || []).map(cat => cat.name),
+      ...transactions.map(tx => tx.category)
+    ].filter(Boolean))
+  ).sort();
+
   const filteredTransactions = transactions
     .filter(tx => {
       const matchesTab = activeTab === 'payable' ? (tx.type === 'expense' && tx.status === 'pending') :
@@ -92,12 +101,14 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
       
       const matchesAccount = filterAccountId === 'all' || tx.accountId === filterAccountId;
       
+      const matchesCategory = filterCategory === 'all' || tx.category === filterCategory;
+      
       const matchesSearch = tx.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
                             tx.category.toLowerCase().includes(searchTerm.toLowerCase());
                             
-      const matchesDate = (!startDate || tx.date >= startDate) && (!endDate || tx.date <= endDate);
+      const matchesDate = ignoreDate || ((!startDate || tx.date >= startDate) && (!endDate || tx.date <= endDate));
                             
-      return matchesTab && matchesAccount && matchesSearch && matchesDate;
+      return matchesTab && matchesAccount && matchesCategory && matchesSearch && matchesDate;
     })
     .sort((a, b) => b.date.localeCompare(a.date));
 
@@ -173,19 +184,50 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
           </div>
 
           <div className="right-filters">
-            <div className="date-filter-group">
-              <CustomDatePicker
-                value={startDate}
-                onChange={e => setStartDate(e.target.value)}
-                placeholder="Data Inicial"
-                className="date-picker-custom"
-              />
-              <span className="date-separator">até</span>
-              <CustomDatePicker
-                value={endDate}
-                onChange={e => setEndDate(e.target.value)}
-                placeholder="Data Final"
-                className="date-picker-custom"
+            <div className={`date-filter-flow-container ${ignoreDate ? 'collapsed-gap' : ''}`}>
+              <div className="date-filter-toggle glass">
+                <button
+                  type="button"
+                  className={`date-toggle-btn ${!ignoreDate ? 'active' : ''}`}
+                  onClick={() => setIgnoreDate(false)}
+                >
+                  Por Período
+                </button>
+                <button
+                  type="button"
+                  className={`date-toggle-btn ${ignoreDate ? 'active' : ''}`}
+                  onClick={() => setIgnoreDate(true)}
+                >
+                  Todo o Período
+                </button>
+              </div>
+
+              <div className={`date-filter-inputs-wrapper ${ignoreDate ? 'collapsed' : ''}`}>
+                <CustomDatePicker
+                  value={startDate}
+                  onChange={e => setStartDate(e.target.value)}
+                  placeholder="Data Inicial"
+                  className="date-picker-custom"
+                />
+                <span className="date-separator">até</span>
+                <CustomDatePicker
+                  value={endDate}
+                  onChange={e => setEndDate(e.target.value)}
+                  placeholder="Data Final"
+                  className="date-picker-custom"
+                />
+              </div>
+            </div>
+
+            <div className="category-select-wrapper">
+              <CustomSelect
+                className="category-filter-select-custom"
+                value={filterCategory}
+                onChange={e => setFilterCategory(e.target.value)}
+                options={[
+                  { value: 'all', label: 'Todas as Categorias' },
+                  ...uniqueCategories.map(cat => ({ value: cat, label: cat }))
+                ]}
               />
             </div>
             

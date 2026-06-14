@@ -75,7 +75,7 @@
 
 /* Custom modal overrides to support date picker dropdowns and wider desktop display */
 .loan-form-modal-container {
-  max-width: 530px !important;
+  max-width: 600px !important;
   overflow: visible !important;
 }
 

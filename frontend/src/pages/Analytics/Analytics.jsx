@@ -21,8 +21,9 @@ const CHART_COLORS = [
 ];
 
 export function Analytics() {
-  const { transactions, categoryLimits, totalBalance, categories = [] } = useFinance();
+  const { accounts = [], transactions, categoryLimits, totalBalance, categories = [] } = useFinance();
   const [period, setPeriod] = useState('current_month'); // 'current_month', 'last_3_months', 'last_6_months'
+  const [selectedAccountId, setSelectedAccountId] = useState('all_accounts');
   const [hoveredCategory, setHoveredCategory] = useState(null);
   const [hoveredBarMonth, setHoveredBarMonth] = useState(null);
 
@@ -47,9 +48,13 @@ export function Analytics() {
 
   const { start: periodStartDate } = getPeriodFilter();
 
+  const activeAccounts = accounts.filter(a => a.active !== false);
+
   const filteredTransactions = transactions.filter(t => {
     const tDate = new Date(t.date + 'T00:00:00');
-    return tDate >= periodStartDate;
+    const matchesPeriod = tDate >= periodStartDate;
+    const matchesAccount = selectedAccountId === 'all_accounts' || t.accountId === selectedAccountId;
+    return matchesPeriod && matchesAccount;
   });
 
   // --- 2. Cálculos Financeiros (KPIs) ---
@@ -75,15 +80,19 @@ export function Analytics() {
   const weeklyAverage = dailyAverage * 7;
 
   // Projeção a 30 dias (Salto estimado base em Previsões pendentes do usuário)
+  const startBalance = selectedAccountId === 'all_accounts'
+    ? totalBalance
+    : (accounts.find(a => a.id === selectedAccountId)?.balance || 0);
+
   const pendingForecastsIncome = transactions
-    .filter(t => t.type === 'income' && t.status === 'pending' && t.is_forecast === 1)
+    .filter(t => t.type === 'income' && t.status === 'pending' && t.is_forecast === 1 && (selectedAccountId === 'all_accounts' || t.accountId === selectedAccountId))
     .reduce((sum, t) => sum + t.amount, 0);
 
   const pendingForecastsExpense = transactions
-    .filter(t => t.type === 'expense' && t.status === 'pending' && t.is_forecast === 1)
+    .filter(t => t.type === 'expense' && t.status === 'pending' && t.is_forecast === 1 && (selectedAccountId === 'all_accounts' || t.accountId === selectedAccountId))
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const projectedBalance30Days = totalBalance + pendingForecastsIncome - pendingForecastsExpense;
+  const projectedBalance30Days = startBalance + pendingForecastsIncome - pendingForecastsExpense;
 
   // --- 3. Rosca SVG: Distribuição por Categoria ---
   const expenseByCategory = filteredTransactions
@@ -142,6 +151,9 @@ export function Analytics() {
   const monthlyTotals = getMonthsRangeList();
   transactions.forEach(t => {
     if (t.category.toLowerCase().trim() === 'transferência') return;
+    const matchesAccount = selectedAccountId === 'all_accounts' || t.accountId === selectedAccountId;
+    if (!matchesAccount) return;
+
     const tMonthKey = t.date.substring(0, 7); // YYYY-MM
     const foundMonth = monthlyTotals.find(m => m.key === tMonthKey);
     if (foundMonth) {
@@ -206,17 +218,36 @@ export function Analytics() {
 
       {/* Cartão de Filtro */}
       <GlassCard className="analytics-filters-card">
-        <label>Selecione o Intervalo dos Dados:</label>
-        <div className="period-select-wrapper">
-          <CustomSelect 
-            value={period}
-            onChange={e => setPeriod(e.target.value)}
-            options={[
-              { value: 'current_month', label: 'Mês Atual' },
-              { value: 'last_3_months', label: 'Últimos 3 Meses' },
-              { value: 'last_6_months', label: 'Últimos 6 Meses' }
-            ]}
-          />
+        <div className="analytics-filter-item">
+          <label>Intervalo dos Dados:</label>
+          <div className="analytics-select-wrapper">
+            <CustomSelect 
+              value={period}
+              onChange={e => setPeriod(e.target.value)}
+              options={[
+                { value: 'current_month', label: 'Mês Atual' },
+                { value: 'last_3_months', label: 'Últimos 3 Meses' },
+                { value: 'last_6_months', label: 'Últimos 6 Meses' }
+              ]}
+            />
+          </div>
+        </div>
+
+        <div className="analytics-filter-item">
+          <label>Filtrar por Conta:</label>
+          <div className="analytics-select-wrapper">
+            <CustomSelect 
+              value={selectedAccountId}
+              onChange={e => setSelectedAccountId(e.target.value)}
+              options={[
+                { value: 'all_accounts', label: 'Todas as Contas' },
+                ...activeAccounts.map(acc => ({
+                  value: acc.id,
+                  label: acc.name
+                }))
+              ]}
+            />
+          </div>
         </div>
       </GlassCard>
 
@@ -238,7 +269,7 @@ export function Analytics() {
               </span>
             </div>
             <h3>{savingsRate.toFixed(1)}%</h3>
-            <p>Economizado: R$ {Math.max(savings, 0).toFixed(2)}</p>
+            <p>Economizado: {formatCurrency(Math.max(savings, 0))}</p>
           </div>
           <div className="kpi-progress-circle-wrapper">
             <svg width="56" height="56" viewBox="0 0 56 56">
@@ -271,8 +302,8 @@ export function Analytics() {
                 </span>
               </span>
             </div>
-            <h3>R$ {weeklyAverage.toFixed(2)}</h3>
-            <p>Média diária de R$ {dailyAverage.toFixed(2)}</p>
+            <h3>{formatCurrency(weeklyAverage)}</h3>
+            <p>Média diária de {formatCurrency(dailyAverage)}</p>
           </div>
         </GlassCard>
 
@@ -291,7 +322,7 @@ export function Analytics() {
                 </span>
               </span>
             </div>
-            <h3>R$ {projectedBalance30Days.toFixed(2)}</h3>
+            <h3>{formatCurrency(projectedBalance30Days)}</h3>
             <p>Com base em previsões futuras</p>
           </div>
         </GlassCard>
@@ -343,7 +374,7 @@ export function Analytics() {
               </svg>
               <div className="donut-center-info">
                 <span>Total Gasto</span>
-                <h4>R$ {totalExpense.toFixed(2)}</h4>
+                <h4>{formatCurrency(totalExpense)}</h4>
               </div>
             </div>
 
@@ -365,7 +396,7 @@ export function Analytics() {
                     </div>
                     <div className="donut-legend-values">
                       <span className="legend-percent">{seg.percentage.toFixed(0)}%</span>
-                      <span className="legend-amount">R$ {seg.amount.toFixed(2)}</span>
+                      <span className="legend-amount">{formatCurrency(seg.amount)}</span>
                     </div>
                   </div>
                 ))
@@ -392,13 +423,13 @@ export function Analytics() {
           <div className="bar-chart-container">
             {/* Tooltip flutuante */}
             {hoveredBarMonth && (
-              <div className="chart-tooltip">
+              <div className="analytics-chart-tooltip">
                 <span className="tooltip-title">{hoveredBarMonth.label}</span>
                 <span className="tooltip-row income">
-                  <span>Receitas:</span> <strong>R$ {hoveredBarMonth.income.toFixed(2)}</strong>
+                  <span>Receitas:</span> <strong>{formatCurrency(hoveredBarMonth.income)}</strong>
                 </span>
                 <span className="tooltip-row expense">
-                  <span>Despesas:</span> <strong>R$ {hoveredBarMonth.expense.toFixed(2)}</strong>
+                  <span>Despesas:</span> <strong>{formatCurrency(hoveredBarMonth.expense)}</strong>
                 </span>
               </div>
             )}
@@ -459,7 +490,7 @@ export function Analytics() {
           <div className="rule-bar-row">
             <div className="rule-bar-header">
               <span>Necessidades Essenciais (Meta: 50%)</span>
-              <span>{needsPct.toFixed(0)}% (R$ {rulesBreakdown.needs.toFixed(2)})</span>
+              <span>{needsPct.toFixed(0)}% ({formatCurrency(rulesBreakdown.needs)})</span>
             </div>
             <div className="rule-bar-track">
               <div className="rule-progress-bar-bg">
@@ -481,7 +512,7 @@ export function Analytics() {
           <div className="rule-bar-row">
             <div className="rule-bar-header">
               <span>Desejos & Lazer (Meta: 30%)</span>
-              <span>{wantsPct.toFixed(0)}% (R$ {rulesBreakdown.wants.toFixed(2)})</span>
+              <span>{wantsPct.toFixed(0)}% ({formatCurrency(rulesBreakdown.wants)})</span>
             </div>
             <div className="rule-bar-track">
               <div className="rule-progress-bar-bg">
@@ -503,7 +534,7 @@ export function Analytics() {
           <div className="rule-bar-row">
             <div className="rule-bar-header">
               <span>Investimentos & Economia (Meta: 20%)</span>
-              <span>{savingsPct.toFixed(0)}% (R$ {rulesBreakdown.savings.toFixed(2)})</span>
+              <span>{savingsPct.toFixed(0)}% ({formatCurrency(rulesBreakdown.savings)})</span>
             </div>
             <div className="rule-bar-track">
               <div className="rule-progress-bar-bg">

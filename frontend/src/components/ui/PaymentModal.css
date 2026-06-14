@@ -450,3 +450,19 @@
 .mt-12 {
   margin-top: 12px;
 }
+
+/* Custom overrides to prevent datepicker and select clipping */
+.payment-modal-container {
+  max-width: 600px !important;
+  overflow: visible !important;
+}
+
+.payment-modal-container .modal-body {
+  overflow: visible !important;
+}
+
+@media (max-width: 768px) {
+  .payment-modal-container {
+    overflow-y: auto !important;
+  }
+}

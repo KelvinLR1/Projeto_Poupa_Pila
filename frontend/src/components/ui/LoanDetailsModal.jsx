@@ -13,6 +13,15 @@ export function LoanDetailsModal({ loan, onClose, onAddAmount, onRegisterPayment
   const containerRef = useRef(null);
   const lastHeightRef = useRef(null);
 
+  const [isClosing, setIsClosing] = useState(false);
+
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      onClose();
+    }, 180);
+  };
+
   useLayoutEffect(() => {
     if (containerRef.current) {
       const element = containerRef.current;
@@ -95,7 +104,7 @@ export function LoanDetailsModal({ loan, onClose, onAddAmount, onRegisterPayment
   const colPayLabel      = loan.type === 'lent' ? 'Devoluções Recebidas' : 'Valores Recebidos';
 
   return createPortal(
-    <div className="modal-overlay" onClick={onClose}>
+    <div className={`modal-overlay ${isClosing ? 'closing' : ''}`} onClick={handleClose}>
       <div ref={containerRef} className="modal-container loan-details-container" onClick={e => e.stopPropagation()}>
 
         {/* Header */}
@@ -120,7 +129,7 @@ export function LoanDetailsModal({ loan, onClose, onAddAmount, onRegisterPayment
             <h3>{loan.counterpart}</h3>
             {loan.title && <p>{loan.title}</p>}
           </div>
-          <button className="close-btn" onClick={onClose} title="Fechar">
+          <button className="close-btn" onClick={handleClose} title="Fechar">
             <X size={18} />
           </button>
         </div>

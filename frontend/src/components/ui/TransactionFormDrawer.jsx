@@ -22,7 +22,7 @@ function addMonthsHelper(dateStr, months) {
 }
 
 export function TransactionFormDrawer({ onClose }) {
-  const { addTransaction, accounts, categories } = useFinance();
+  const { addTransaction, accounts, categories, addCategory } = useFinance();
   const [type, setType] = useState('expense');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -36,6 +36,11 @@ export function TransactionFormDrawer({ onClose }) {
   const [installmentsCount, setInstallmentsCount] = useState('2');
   const [installmentValueMode, setInstallmentValueMode] = useState('total');
   const [installments, setInstallments] = useState([]);
+  
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatRuleType, setNewCatRuleType] = useState('want');
+  const [catError, setCatError] = useState('');
 
   const handleClose = () => {
     setIsClosing(true);
@@ -139,6 +144,25 @@ export function TransactionFormDrawer({ onClose }) {
       newInst[idx].date = value;
     }
     setInstallments(newInst);
+  };
+
+  const handleCreateCategory = async (e) => {
+    e.preventDefault();
+    setCatError('');
+    if (!newCatName.trim()) return;
+
+    try {
+      await addCategory({
+        name: newCatName.trim(),
+        type: type,
+        rule_type: type === 'expense' ? newCatRuleType : null
+      });
+      setCategory(newCatName.trim());
+      setIsAddingCategory(false);
+      setNewCatName('');
+    } catch (err) {
+      setCatError(err.message || 'Erro ao criar categoria.');
+    }
   };
 
   const handleSubmit = (e) => {
@@ -360,25 +384,176 @@ export function TransactionFormDrawer({ onClose }) {
                     placeholder="Ex: Conta de Luz"
                   />
                 </div>
-                <div className="form-group flex-1">
-                  <label>Categoria</label>
-                  <input 
-                    type="text" 
-                    required
-                    className="form-input"
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    placeholder="Ex: Moradia"
-                    list="drawer-categories"
-                  />
-                  <datalist id="drawer-categories">
-                    {categories
-                      .filter(c => c.type === type)
-                      .map(c => (
-                        <option key={c.id} value={c.name} />
-                      ))
-                    }
-                  </datalist>
+                <div className="form-group flex-1" style={{ position: 'relative' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label>Categoria</label>
+                    {!isAddingCategory ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddingCategory(true);
+                          setCatError('');
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--accent-emerald)',
+                          fontSize: '0.78rem',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          padding: '0 0 4px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          transition: 'opacity 0.2s'
+                        }}
+                        className="btn-add-cat-toggle"
+                      >
+                        + Nova Categoria
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingCategory(false)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--text-muted)',
+                          fontSize: '0.78rem',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          padding: '0 0 4px'
+                        }}
+                      >
+                        Cancelar
+                      </button>
+                    )}
+                  </div>
+
+                  {!isAddingCategory ? (
+                    <>
+                      <input 
+                        type="text" 
+                        required
+                        className="form-input"
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        placeholder="Ex: Moradia"
+                        list="drawer-categories"
+                      />
+                      <datalist id="drawer-categories">
+                        {categories
+                          .filter(c => c.active !== false && c.type === type)
+                          .map(c => (
+                            <option key={c.id} value={c.name} />
+                          ))
+                        }
+                      </datalist>
+                    </>
+                  ) : (
+                    <div className="inline-add-category-box" style={{
+                      padding: '12px',
+                      background: 'rgba(255, 255, 255, 0.02)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                      animation: 'slideDownFast 0.2s ease-out'
+                    }}>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <input
+                          type="text"
+                          className="form-input sm-input"
+                          style={{ height: '36px', padding: '6px 10px', fontSize: '0.85rem', flex: 1 }}
+                          placeholder="Nome da categoria"
+                          value={newCatName}
+                          onChange={(e) => setNewCatName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleCreateCategory(e);
+                            }
+                          }}
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={handleCreateCategory}
+                          disabled={!newCatName.trim()}
+                          style={{
+                            height: '36px',
+                            padding: '0 12px',
+                            background: 'var(--accent-emerald)',
+                            color: '#000',
+                            borderRadius: '6px',
+                            fontWeight: '700',
+                            fontSize: '0.8rem',
+                            cursor: newCatName.trim() ? 'pointer' : 'not-allowed',
+                            opacity: newCatName.trim() ? 1 : 0.6
+                          }}
+                        >
+                          Salvar
+                        </button>
+                      </div>
+
+                      {type === 'expense' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Classificação 50/30/20</span>
+                          <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.02)', padding: '2px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                            <button
+                              type="button"
+                              onClick={() => setNewCatRuleType('necessity')}
+                              style={{
+                                flex: 1,
+                                fontSize: '0.75rem',
+                                padding: '4px 2px',
+                                borderRadius: '4px',
+                                background: newCatRuleType === 'necessity' ? 'rgba(255,255,255,0.08)' : 'transparent',
+                                color: newCatRuleType === 'necessity' ? 'var(--text-primary)' : 'var(--text-muted)',
+                                fontWeight: newCatRuleType === 'necessity' ? '600' : '400'
+                              }}
+                            >
+                              Meta 50%
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setNewCatRuleType('want')}
+                              style={{
+                                flex: 1,
+                                fontSize: '0.75rem',
+                                padding: '4px 2px',
+                                borderRadius: '4px',
+                                background: newCatRuleType === 'want' ? 'rgba(255,255,255,0.08)' : 'transparent',
+                                color: newCatRuleType === 'want' ? 'var(--text-primary)' : 'var(--text-muted)',
+                                fontWeight: newCatRuleType === 'want' ? '600' : '400'
+                              }}
+                            >
+                              Meta 30%
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setNewCatRuleType('investment')}
+                              style={{
+                                flex: 1,
+                                fontSize: '0.75rem',
+                                padding: '4px 2px',
+                                borderRadius: '4px',
+                                background: newCatRuleType === 'investment' ? 'rgba(255,255,255,0.08)' : 'transparent',
+                                color: newCatRuleType === 'investment' ? 'var(--text-primary)' : 'var(--text-muted)',
+                                fontWeight: newCatRuleType === 'investment' ? '600' : '400'
+                              }}
+                            >
+                              Meta 20%
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {catError && (
+                        <span style={{ fontSize: '0.75rem', color: 'var(--accent-coral)', display: 'block' }}>{catError}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 

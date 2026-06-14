@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
+import { formatCurrency } from '../../utils/formatters';
 import { GlassCard } from '../../components/ui/GlassCard';
 import { Button } from '../../components/ui/Button';
 import { CustomSelect } from '../../components/ui/CustomSelect';
@@ -365,6 +366,58 @@ export function Settings() {
     fileReader.readAsText(file);
   };
 
+  const DEFAULT_CAT_NAMES = ['Empréstimo', 'Recebimento de Empréstimo', 'Salário', 'Despesa', 'Receita'];
+
+  const renderCategoryItem = (cat) => {
+    const isDefault = DEFAULT_CAT_NAMES.includes(cat.name);
+    return (
+      <div key={cat.id} className="category-item-row">
+        {/* Col 1: Nome e Marcador */}
+        <div className="cat-item-col-name">
+          <span className={`cat-item-dot ${cat.type === 'income' ? 'income' : 'expense'}`}></span>
+          <span className="cat-item-name">{cat.name}</span>
+        </div>
+
+        {/* Col 2: Tipo de Transação */}
+        <div className="cat-item-col-type">
+          <span className={`cat-item-type-badge ${cat.type === 'income' ? 'income' : 'expense'}`}>
+            {cat.type === 'income' ? 'Receita' : 'Despesa'}
+          </span>
+        </div>
+
+        {/* Col 3: Regra e Ações */}
+        <div className="cat-item-col-actions">
+          {cat.type === 'expense' && (
+            <select
+              value={cat.rule_type || 'want'}
+              onChange={(e) => handleUpdateCategoryRuleType(cat.id, e.target.value)}
+              className="cat-item-rule-select"
+            >
+              <option value="necessity">Necessidade (50%)</option>
+              <option value="want">Desejo/Lazer (30%)</option>
+              <option value="investment">Investimento (20%)</option>
+            </select>
+          )}
+
+          <div className="cat-item-action-wrapper">
+            {isDefault ? (
+              <span className="cat-item-system-label">Sistema</span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => handleDeleteCategory(cat.id)}
+                className="cat-item-delete-btn"
+                title="Excluir Categoria"
+              >
+                <Trash2 size={14} />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="settings-page">
       <div className="page-header">
@@ -423,7 +476,7 @@ export function Settings() {
       {/* Conteúdo das Abas */}
       <div className="settings-tab-content">
         {activeTab === 'profile' && (
-          <div className="tab-pane-grid">
+          <div className="tab-pane-grid settings-tab-pane">
             <GlassCard className="settings-card">
               <div className="card-header-icon">
                 <User size={20} className="text-emerald" />
@@ -506,7 +559,7 @@ export function Settings() {
         )}
 
         {activeTab === 'customization' && (
-          <GlassCard className="settings-card">
+          <GlassCard className="settings-card settings-tab-pane">
             <div className="card-header-icon">
               <Palette size={20} className="text-emerald" />
               <h3>Customização de Cores</h3>
@@ -564,7 +617,7 @@ export function Settings() {
         )}
 
         {activeTab === 'backup' && (
-          <GlassCard className="settings-card">
+          <GlassCard className="settings-card settings-tab-pane">
             <div className="card-header-icon">
               <Database size={20} className="text-emerald" />
               <h3>Backup e Dados</h3>
@@ -601,7 +654,7 @@ export function Settings() {
         )}
 
         {activeTab === 'system' && (
-          <div className="tab-pane-grid">
+          <div className="tab-pane-grid settings-tab-pane">
             <GlassCard className="settings-card">
               <div className="card-header-icon">
                 <Shield size={20} className="text-emerald" />
@@ -648,7 +701,7 @@ export function Settings() {
         )}
 
         {activeTab === 'access' && (
-          <div className="tab-pane-grid">
+          <div className="tab-pane-grid settings-tab-pane">
             <GlassCard className="settings-card">
               <div className="card-header-icon">
                 <Users size={20} className="text-emerald" />
@@ -798,7 +851,7 @@ export function Settings() {
         )}
 
         {activeTab === 'categories_limits' && (
-          <div className="tab-pane-grid">
+          <div className="tab-pane-grid settings-tab-pane">
             {/* Coluna 1: Gerenciar Categorias */}
             <GlassCard className="settings-card animate-fade-in">
               <div className="card-header-icon">
@@ -882,89 +935,47 @@ export function Settings() {
 
               <div className="categories-list-container">
                 <h4 className="section-subtitle">Categorias Ativas</h4>
-                <div className="categories-list-scroll mt-12" style={{ maxHeight: '300px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {categories.length === 0 ? (
-                     <p className="text-muted" style={{ fontSize: '0.85rem' }}>Nenhuma categoria cadastrada.</p>
-                  ) : (
-                    categories.map(cat => (
-                      <div key={cat.id} className="category-item-row" style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        padding: '10px 14px',
-                        background: 'rgba(255, 255, 255, 0.02)',
-                        border: '1px solid rgba(255, 255, 255, 0.04)',
-                        borderRadius: '10px'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{
-                            width: '6px',
-                            height: '6px',
-                            borderRadius: '50%',
-                            background: cat.type === 'income' ? 'var(--accent-emerald, #10b981)' : 'var(--accent-coral, #f43f5e)'
-                          }}></span>
-                          <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>{cat.name}</span>
-                          <span style={{
-                            fontSize: '0.7rem',
-                            padding: '1px 6px',
-                            borderRadius: '6px',
-                            background: cat.type === 'income' ? 'rgba(16, 185, 129, 0.08)' : 'rgba(244, 63, 94, 0.08)',
-                            color: cat.type === 'income' ? 'var(--accent-emerald)' : 'var(--accent-coral)',
-                            fontWeight: '600'
-                          }}>
-                            {cat.type === 'income' ? 'Receita' : 'Despesa'}
-                          </span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          {cat.type === 'expense' && (
-                            <select
-                              value={cat.rule_type || 'want'}
-                              onChange={(e) => handleUpdateCategoryRuleType(cat.id, e.target.value)}
-                              style={{
-                                background: 'rgba(255, 255, 255, 0.03)',
-                                border: '1px solid rgba(255, 255, 255, 0.08)',
-                                color: 'var(--text-secondary)',
-                                borderRadius: '6px',
-                                padding: '2px 8px',
-                                fontSize: '0.75rem',
-                                cursor: 'pointer',
-                                outline: 'none'
-                              }}
-                              className="form-input-select"
-                            >
-                              <option value="necessity">Necessidade (50%)</option>
-                              <option value="want">Desejo/Lazer (30%)</option>
-                              <option value="investment">Investimento (20%)</option>
-                            </select>
-                          )}
+                {categories.length === 0 ? (
+                  <div className="categories-list-scroll mt-12" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                    <p className="text-muted" style={{ fontSize: '0.85rem' }}>Nenhuma categoria cadastrada.</p>
+                  </div>
+                ) : (() => {
+                  const defaultCats = categories
+                    .filter(cat => cat.active !== false && DEFAULT_CAT_NAMES.includes(cat.name))
+                    .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
 
-                          {['Empréstimo', 'Recebimento de Empréstimo', 'Salário', 'Despesa', 'Receita'].includes(cat.name) ? (
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', width: '32px', textAlign: 'center' }}>Padrão</span>
+                  const customCats = categories
+                    .filter(cat => cat.active !== false && !DEFAULT_CAT_NAMES.includes(cat.name))
+                    .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
+
+                  return (
+                    <div className="categories-list-scroll mt-12" style={{ maxHeight: '380px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', paddingRight: '4px' }}>
+                      {/* Categorias Personalizadas */}
+                      <div>
+                        <h5 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', letterSpacing: '0.05em', fontWeight: 700 }}>
+                          Categorias do Usuário ({customCats.length})
+                        </h5>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {customCats.length === 0 ? (
+                            <p className="text-muted" style={{ fontSize: '0.8rem', paddingLeft: '4px' }}>Nenhuma categoria personalizada criada.</p>
                           ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteCategory(cat.id)}
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                color: 'var(--accent-coral, #f43f5e)',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                padding: '4px',
-                                borderRadius: '4px'
-                              }}
-                              className="revoke-btn"
-                              title="Excluir Categoria"
-                            >
-                              <Trash2 size={14} />
-                            </button>
+                            customCats.map(renderCategoryItem)
                           )}
                         </div>
                       </div>
-                    ))
-                  )}
-                </div>
+
+                      {/* Categorias Padrão */}
+                      <div>
+                        <h5 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', letterSpacing: '0.05em', fontWeight: 700 }}>
+                          Categorias do Sistema ({defaultCats.length})
+                        </h5>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {defaultCats.map(renderCategoryItem)}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </GlassCard>
 
@@ -991,7 +1002,7 @@ export function Settings() {
                       options={[
                         { value: '', label: 'Selecione...' },
                         ...categories
-                          .filter(c => c.type === 'expense')
+                          .filter(c => c.active !== false && c.type === 'expense')
                           .map(c => ({ value: c.name, label: c.name }))
                       ]}
                       required
@@ -1047,7 +1058,7 @@ export function Settings() {
 
               <div className="limits-list-container">
                 <h4 className="section-subtitle">Limites Configurados</h4>
-                <div className="limits-list-scroll mt-12" style={{ maxHeight: '300px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div className="limits-list-scroll mt-12" style={{ maxHeight: '480px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {categoryLimits.length === 0 ? (
                     <p className="text-muted" style={{ fontSize: '0.85rem' }}>Nenhum limite configurado.</p>
                   ) : (
@@ -1108,7 +1119,7 @@ export function Settings() {
                           </div>
 
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                            <span>Gasto: R$ {spent.toFixed(2)} / R$ {lim.limit_amount.toFixed(2)}</span>
+                            <span>Gasto: {formatCurrency(spent)} / {formatCurrency(lim.limit_amount)}</span>
                             <span style={{ fontWeight: '600', color: progressColor }}>
                               {percentage.toFixed(0)}%
                             </span>

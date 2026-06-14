@@ -3,11 +3,13 @@ import { useFinance } from '../../context/FinanceContext';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { GlassCard } from '../../components/ui/GlassCard';
 import { Badge } from '../../components/ui/Badge';
-import { ArrowUpRight, ArrowDownRight, Wallet, Activity, AlertTriangle } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Wallet, Activity, AlertTriangle, CheckCircle } from 'lucide-react';
 import './Dashboard.css';
 
 export function Dashboard({ setActiveTab, setFilterAccountId }) {
   const { accounts, transactions, totalBalance, hideValues, categoryLimits } = useFinance();
+  const [activeAlertIndex, setActiveAlertIndex] = React.useState(0);
+  const [userInteracted, setUserInteracted] = React.useState(false);
 
   const getStartOfWeek = () => {
     const today = new Date();
@@ -54,69 +56,40 @@ export function Dashboard({ setActiveTab, setFilterAccountId }) {
         spent,
         percentage
       };
-    })
-    .filter(lim => lim.percentage >= lim.alert_threshold);
+    });
 
-  const recentTransactions = transactions.slice(0, 5);
+  React.useEffect(() => {
+    if (activeAlerts.length <= 1) return;
+    
+    const interval = setInterval(() => {
+      setActiveAlertIndex(prev => (prev + 1) % activeAlerts.length);
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, [activeAlerts.length, userInteracted]);
+
+  const handleSelectAlert = (index) => {
+    setActiveAlertIndex(index);
+    setUserInteracted(prev => !prev);
+  };
+
+  const activeAccounts = accounts.filter(a => a.active !== false);
+  const transactionLimit = Math.max(5, Math.round((activeAccounts.length * 104 - 16) / 80));
+  const recentTransactions = transactions.slice(0, transactionLimit);
+  const currentAlertIndex = activeAlertIndex >= activeAlerts.length ? 0 : activeAlertIndex;
+
+  const currentAlert = activeAlerts[currentAlertIndex];
+  let containerStatusClass = '';
+  if (currentAlert) {
+    const limitExceeded = currentAlert.percentage >= 100;
+    const alertTriggered = currentAlert.percentage >= currentAlert.alert_threshold;
+    containerStatusClass = limitExceeded ? 'status-critical' : alertTriggered ? 'status-warning' : 'status-normal';
+  }
 
   return (
     <div className="dashboard">
-      {/* Alertas de Gastos */}
-      {activeAlerts.length > 0 && (
-        <section className="dashboard-limits-alerts" style={{ marginBottom: '24px' }}>
-          {activeAlerts.map(alert => {
-            const limitExceeded = alert.percentage >= 100;
-            return (
-              <GlassCard 
-                key={alert.id} 
-                className={`alert-card ${limitExceeded ? 'limit-exceeded-card' : 'limit-warning-card'}`}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '16px',
-                  padding: '16px 20px',
-                  border: limitExceeded ? '1px solid rgba(244, 63, 94, 0.2)' : '1px solid rgba(245, 158, 11, 0.2)',
-                  background: limitExceeded 
-                    ? 'linear-gradient(90deg, rgba(244, 63, 94, 0.08) 0%, rgba(244, 63, 94, 0.02) 100%)'
-                    : 'linear-gradient(90deg, rgba(245, 158, 11, 0.08) 0%, rgba(245, 158, 11, 0.02) 100%)',
-                  borderRadius: '16px',
-                  marginBottom: '10px'
-                }}
-              >
-                <div className="alert-icon-wrapper" style={{
-                  background: limitExceeded ? 'rgba(244, 63, 94, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                  borderRadius: '12px',
-                  width: '40px',
-                  height: '40px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0
-                }}>
-                  <AlertTriangle size={20} style={{
-                    color: limitExceeded ? 'var(--accent-coral, #f43f5e)' : 'var(--accent-amber, #f59e0b)'
-                  }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <h4 style={{
-                    margin: 0,
-                    fontSize: '0.95rem',
-                    fontWeight: '600',
-                    color: limitExceeded ? 'var(--accent-coral, #f43f5e)' : 'var(--accent-amber, #f59e0b)'
-                  }}>
-                    {limitExceeded ? 'Limite de Gastos Estourado!' : 'Alerta de Limite de Gastos!'}
-                  </h4>
-                  <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                    A categoria <strong>{alert.category_name}</strong> atingiu {alert.percentage.toFixed(0)}% do limite {alert.period === 'monthly' ? 'mensal' : alert.period === 'weekly' ? 'semanal' : 'total'} (R$ {alert.spent.toFixed(2)} de R$ {alert.limit_amount.toFixed(2)}).
-                  </p>
-                </div>
-              </GlassCard>
-            );
-          })}
-        </section>
-      )}
-      {/* Seção de Saldo Total */}
-      <section className="balance-section">
+      {/* Seção de Saldo Total e Alertas */}
+      <div className={`balance-alerts-wrapper ${activeAlerts.length === 0 ? 'no-alerts' : ''}`}>
         <GlassCard className="total-balance-card">
           <div className="balance-header">
             <div className="icon-wrapper glass">
@@ -132,7 +105,117 @@ export function Dashboard({ setActiveTab, setFilterAccountId }) {
             <span className="trend-text">em relação ao mês passado</span>
           </div>
         </GlassCard>
-      </section>
+
+        {activeAlerts.length > 0 && (
+          <div className={`dashboard-limits-alerts-container ${containerStatusClass}`}>
+            {/* Background dynamic radial glow */}
+            <div className="alerts-container-glow"></div>
+
+            {/* Lateral esquerda: mini menu de seleção */}
+            <div className="alerts-sidebar-menu">
+              {activeAlerts.map((alert, idx) => {
+                const limitExceeded = alert.percentage >= 100;
+                const alertTriggered = alert.percentage >= alert.alert_threshold;
+                const itemStatus = limitExceeded ? 'critical' : alertTriggered ? 'warning' : 'normal';
+                const isActive = idx === currentAlertIndex;
+                return (
+                  <button
+                    key={alert.id}
+                    type="button"
+                    className={`alerts-menu-item ${isActive ? 'active' : ''} ${itemStatus}`}
+                    onClick={() => handleSelectAlert(idx)}
+                  >
+                    <span className="alert-status-indicator"></span>
+                    <span className="alert-menu-label">{alert.category_name}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Conteúdo central: Card do Carrossel */}
+            <div className="alert-carousel-viewport">
+              {activeAlerts.map((alert, idx) => {
+                const isActive = idx === currentAlertIndex;
+                const limitExceeded = alert.percentage >= 100;
+                const alertTriggered = alert.percentage >= alert.alert_threshold;
+                const slideStatusClass = limitExceeded ? 'exceeded' : alertTriggered ? 'warning' : 'normal';
+                
+                const progressColor = limitExceeded 
+                  ? 'var(--accent-coral, #f43f5e)' 
+                  : alertTriggered
+                    ? 'var(--accent-amber, #f59e0b)'
+                    : 'var(--accent-emerald, #10b981)';
+                
+                const remaining = alert.limit_amount - alert.spent;
+                const isOverLimit = remaining < 0;
+
+                return (
+                  <div 
+                    key={alert.id} 
+                    className={`alert-carousel-slide ${isActive ? 'active' : ''} ${slideStatusClass}`}
+                  >
+                    <div className="alert-slide-header">
+                      <div className="alert-slide-category">
+                        <div className="category-icon-container">
+                          {limitExceeded || alertTriggered ? (
+                            <AlertTriangle size={16} className="alert-slide-icon" />
+                          ) : (
+                            <CheckCircle size={16} className="alert-slide-icon" />
+                          )}
+                        </div>
+                        <h4>{alert.category_name}</h4>
+                      </div>
+                      <span className="alert-slide-badge">
+                        {limitExceeded ? 'Estourado' : alertTriggered ? 'Atenção' : 'Dentro do Limite'}
+                      </span>
+                    </div>
+
+                    <div className="alert-slide-values">
+                      <div className="value-block">
+                        <span className="value-label">Gasto Atual</span>
+                        <span className="value-amount">{formatCurrency(alert.spent)}</span>
+                      </div>
+                      <div className="value-block">
+                        <span className="value-label">Limite Mensal</span>
+                        <span className="value-amount">{formatCurrency(alert.limit_amount)}</span>
+                      </div>
+                      <div className="value-block">
+                        <span className="value-label">{isOverLimit ? 'Excedido' : 'Disponível'}</span>
+                        <span className={`value-amount ${isOverLimit ? 'text-coral' : 'text-emerald'}`}>
+                          {formatCurrency(Math.abs(remaining))}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Barra de Progresso */}
+                    <div className="alert-slide-progress-container">
+                      <div className="progress-labels">
+                        <span>Progresso ({alert.percentage.toFixed(0)}%)</span>
+                        <span>Alerta: {alert.alert_threshold}%</span>
+                      </div>
+                      <div className="alert-progress-bar-bg">
+                        {/* Marcador de Alerta */}
+                        <div 
+                          className="progress-marker-line"
+                          style={{ left: `${alert.alert_threshold}%` }}
+                        ></div>
+                        <div 
+                          className="alert-progress-bar-fill"
+                          style={{ 
+                            width: `${Math.min(alert.percentage, 100)}%`,
+                            backgroundColor: progressColor,
+                            boxShadow: `0 0 8px ${progressColor}66`
+                          }}
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Alertas de Contas a Pagar/Receber */}
       <section className="alerts-section">
@@ -165,7 +248,7 @@ export function Dashboard({ setActiveTab, setFilterAccountId }) {
             <h3 className="section-title">Minhas Contas</h3>
           </div>
           <div className="accounts-list">
-            {accounts.map(acc => (
+            {activeAccounts.map(acc => (
               <GlassCard 
                 key={acc.id} 
                 className="account-card clickable"

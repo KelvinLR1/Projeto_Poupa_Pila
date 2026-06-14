@@ -190,8 +190,8 @@ export function Loans() {
       {selectedLoanForPayment && (
         <LoanPaymentModal 
           loan={selectedLoanForPayment} 
-          onConfirm={(loanId, amount, date, description) => {
-            payLoan(loanId, amount, date, description);
+          onConfirm={(loanId, amount, date, description, accountId, category) => {
+            payLoan(loanId, amount, date, description, accountId, category);
             setSelectedLoanForPayment(null);
           }}
           onCancel={() => setSelectedLoanForPayment(null)} 

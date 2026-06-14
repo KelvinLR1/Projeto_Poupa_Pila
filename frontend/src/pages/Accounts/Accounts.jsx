@@ -16,6 +16,15 @@ export function Accounts() {
   const [isTransferring, setIsTransferring] = useState(false);
   const [editingAccount, setEditingAccount] = useState(null);
   const [newAccount, setNewAccount]       = useState({ name: '', type: 'checking', color: '#10b981', initialBalance: '' });
+  const [animatingAccountId, setAnimatingAccountId] = useState(null);
+
+  const handleToggleStatus = (id) => {
+    setAnimatingAccountId(id);
+    setTimeout(() => {
+      toggleAccountStatus(id);
+      setAnimatingAccountId(null);
+    }, 300);
+  };
 
   const inputRef = useRef(null);
 
@@ -58,9 +67,10 @@ export function Accounts() {
 
   const renderCard = (acc) => {
     const isInactive = acc.active === false;
+    const isAnimating = acc.id === animatingAccountId;
 
     return (
-      <GlassCard key={acc.id} className={`account-details-card ${isInactive ? 'acc-inactive' : ''}`}>
+      <GlassCard key={acc.id} className={`account-details-card ${isInactive ? 'acc-inactive' : ''} ${isAnimating ? 'is-toggling-out' : ''}`}>
         {/* Header do card */}
         <div className="acc-card-header">
           <div
@@ -75,10 +85,7 @@ export function Accounts() {
             {getIconForType(acc.type)}
           </div>
           <div className="acc-title" style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <h4>{acc.name}</h4>
-              {isInactive && <Badge variant="default">Inativa</Badge>}
-            </div>
+            <h4>{acc.name}</h4>
             <p>{TYPE_LABELS[acc.type] || 'Conta'}</p>
           </div>
 
@@ -94,7 +101,7 @@ export function Accounts() {
             <button
               className={`acc-action-btn ${isInactive ? 'acc-action-activate' : 'acc-action-deactivate'}`}
               title={isInactive ? 'Reativar conta' : 'Inativar conta'}
-              onClick={() => toggleAccountStatus(acc.id)}
+              onClick={() => handleToggleStatus(acc.id)}
             >
               {isInactive ? <Eye size={15} /> : <EyeOff size={15} />}
             </button>
@@ -103,7 +110,10 @@ export function Accounts() {
 
         {/* Saldo */}
         <div className="acc-card-body">
-          <p>Saldo Atual</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <p style={{ margin: 0 }}>Saldo Atual</p>
+            {isInactive && <Badge variant="default">Inativa</Badge>}
+          </div>
           <h2
             style={{
               color: isInactive ? 'var(--text-muted)'

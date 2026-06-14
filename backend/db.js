@@ -115,6 +115,12 @@ db.exec(`
   );
 `);
 
+try {
+  db.exec('ALTER TABLE loan_history ADD COLUMN transaction_id TEXT');
+} catch (e) {
+  // Column already exists, safe to ignore
+}
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS vault_groups (
     id TEXT PRIMARY KEY,
@@ -217,6 +223,13 @@ try {
 } catch (e) {
   // Column already exists, safe to ignore
 }
+
+try {
+  db.exec('ALTER TABLE categories ADD COLUMN active INTEGER DEFAULT 1');
+} catch (e) {
+  // Column already exists, safe to ignore
+}
+
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS category_limits (

@@ -168,21 +168,23 @@ export function Vault() {
                       {isSelected ? <FolderOpen size={16} style={{ color: group.color }} /> : <Folder size={16} style={{ color: group.color }} />}
                       <span>{group.name}</span>
                     </button>
-                    <span className="vault-tree-count">{groupCount}</span>
-                    <button
-                      className="vault-tree-action-btn"
-                      title="Adicionar subgrupo"
-                      onClick={(e) => { e.stopPropagation(); setGroupModal({ mode: 'add', type: 'subgroup', groupId: group.id }); }}
-                    >
-                      <Plus size={12} />
-                    </button>
-                    <button
-                      className="vault-tree-action-btn danger"
-                      title="Excluir grupo"
-                      onClick={(e) => { e.stopPropagation(); if (window.confirm(`Excluir grupo "${group.name}" e todas as suas credenciais?`)) deleteGroup(group.id); }}
-                    >
-                      <Trash2 size={12} />
-                    </button>
+                    <div className="vault-group-actions-right">
+                      <span className="vault-tree-count">{groupCount}</span>
+                      <button
+                        className="vault-tree-action-btn"
+                        title="Adicionar subgrupo"
+                        onClick={(e) => { e.stopPropagation(); setGroupModal({ mode: 'add', type: 'subgroup', groupId: group.id }); }}
+                      >
+                        <Plus size={12} />
+                      </button>
+                      <button
+                        className="vault-tree-action-btn danger"
+                        title="Excluir grupo"
+                        onClick={(e) => { e.stopPropagation(); if (window.confirm(`Excluir grupo "${group.name}" e todas as suas credenciais?`)) deleteGroup(group.id); }}
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
                   </div>
 
                   {isExpanded && (group.subgroups || []).map(sg => {
@@ -197,14 +199,16 @@ export function Vault() {
                           <span className="vault-subgroup-dot" style={{ backgroundColor: group.color }} />
                           <span>{sg.name}</span>
                         </button>
-                        <span className="vault-tree-count">{sgCount}</span>
-                        <button
-                          className="vault-tree-action-btn danger"
-                          title="Excluir subgrupo"
-                          onClick={(e) => { e.stopPropagation(); if (window.confirm(`Excluir subgrupo "${sg.name}"?`)) deleteSubgroup(group.id, sg.id); }}
-                        >
-                          <Trash2 size={12} />
-                        </button>
+                        <div className="vault-group-actions-right">
+                          <span className="vault-tree-count">{sgCount}</span>
+                          <button
+                            className="vault-tree-action-btn danger"
+                            title="Excluir subgrupo"
+                            onClick={(e) => { e.stopPropagation(); if (window.confirm(`Excluir subgrupo "${sg.name}"?`)) deleteSubgroup(group.id, sg.id); }}
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
                       </div>
                     );
                   })}

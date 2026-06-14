@@ -108,7 +108,7 @@ export function PaymentModal({ transaction, onConfirm, onCancel, loans = [] }) {
 
   return createPortal(
     <div className={`modal-overlay ${isClosing ? 'closing' : ''}`} onClick={handleClose}>
-      <div ref={containerRef} className="modal-container animate-slide-up" onClick={(e) => e.stopPropagation()}>
+      <div ref={containerRef} className="modal-container payment-modal-container animate-slide-up" onClick={(e) => e.stopPropagation()}>
         
         <div className="modal-header">
           <div className="modal-header-content">
@@ -234,7 +234,7 @@ export function PaymentModal({ transaction, onConfirm, onCancel, loans = [] }) {
                       ...loans.map(l => {
                         const balance = l.totalAmount - l.paidAmount;
                         const labelType = l.type === 'lent' ? 'A Receber' : 'A Pagar';
-                        const displayBalance = balance > 0 ? `(Saldo: R$ ${balance.toFixed(2)} ${labelType})` : '(Quitado)';
+                        const displayBalance = balance > 0 ? `(Saldo: ${formatCurrency(balance)} ${labelType})` : '(Quitado)';
                         return {
                           value: l.id,
                           label: `${l.counterpart} ${displayBalance}`

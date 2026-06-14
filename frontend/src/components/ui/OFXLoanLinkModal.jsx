@@ -139,7 +139,7 @@ export function OFXLoanLinkModal({ ofxTx, loans = [], onConfirm, onClose }) {
                   ...loans.map(l => {
                     const balance = l.totalAmount - l.paidAmount;
                     const labelType = l.type === 'lent' ? 'A Receber' : 'A Pagar';
-                    const displayBalance = balance > 0 ? `(Saldo: R$ ${balance.toFixed(2)} ${labelType})` : '(Quitado)';
+                    const displayBalance = balance > 0 ? `(Saldo: ${formatCurrency(balance)} ${labelType})` : '(Quitado)';
                     return {
                       value: l.id,
                       label: `${l.counterpart} ${l.title ? `- ${l.title}` : ''} ${displayBalance}`

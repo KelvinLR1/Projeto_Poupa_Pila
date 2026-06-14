@@ -165,7 +165,7 @@ export function FinanceProvider({ children }) {
     }
   };
 
-  const payLoan = async (loanId, amount, date, description) => {
+  const payLoan = async (loanId, amount, date, description, accountId, category) => {
     try {
       const res = await fetch(`/api/finance/loans/${loanId}/pay`, {
         method: 'POST',
@@ -173,7 +173,7 @@ export function FinanceProvider({ children }) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ amount, date, description })
+        body: JSON.stringify({ amount, date, description, accountId, category })
       });
       if (res.ok) {
         await fetchFinanceData();

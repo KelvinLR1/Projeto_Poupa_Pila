@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useFinance } from '../../context/FinanceContext';
 import { Button } from './Button';
 import { X, ArrowUpRight, ArrowDownRight, Info } from 'lucide-react';
 import { CustomDatePicker } from './CustomDatePicker';
+import { CustomSelect } from './CustomSelect';
 import { maskCurrencyBRL, parseCurrencyBRL } from '../../utils/formatters';
 import './LoanFormModal.css';
 import './PaymentModal.css';
 
 export function LoanFormModal({ onClose, initialCounterpart = '', initialType = 'lent' }) {
-  const { addLoan, loans } = useFinance();
+  const { addLoan, loans, accounts, categories } = useFinance();
   const [type, setType] = useState(initialType);
   const [counterpart, setCounterpart] = useState(initialCounterpart);
   const [totalAmount, setTotalAmount] = useState('');
@@ -18,6 +19,36 @@ export function LoanFormModal({ onClose, initialCounterpart = '', initialType = 
   const [description, setDescription] = useState('');
   const [loanTitle, setLoanTitle] = useState('');
 
+  const activeAccounts = accounts.filter(a => a.active !== false);
+  const [accountId, setAccountId] = useState(activeAccounts[0]?.id || '');
+  const [category, setCategory] = useState('');
+
+  const [isClosing, setIsClosing] = useState(false);
+
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      onClose();
+    }, 180);
+  };
+
+  // Sincroniza conta padrão se as contas carregarem depois
+  useEffect(() => {
+    if (activeAccounts.length > 0 && !accountId) {
+      setAccountId(activeAccounts[0].id);
+    }
+  }, [accounts, accountId]);
+
+  // Define categoria padrão de acordo com o tipo de empréstimo
+  useEffect(() => {
+    if (categories.length > 0) {
+      const defaultCat = type === 'lent'
+        ? categories.find(c => c.active !== false && c.name === 'Empréstimo' && c.type === 'expense')?.name || categories.filter(c => c.active !== false && c.type === 'expense')[0]?.name || ''
+        : categories.find(c => c.active !== false && c.name === 'Recebimento de Empréstimo' && c.type === 'income')?.name || categories.filter(c => c.active !== false && c.type === 'income')[0]?.name || '';
+      setCategory(defaultCat);
+    }
+  }, [categories, type]);
+
   const isDuplicate = !initialCounterpart && loans.some(
     l => l.counterpart.toLowerCase().trim() === counterpart.toLowerCase().trim() && l.type === type
   );
@@ -25,7 +56,7 @@ export function LoanFormModal({ onClose, initialCounterpart = '', initialType = 
   const handleSubmit = (e) => {
     e.preventDefault();
     const parsedAmount = parseCurrencyBRL(totalAmount);
-    if (!counterpart || parsedAmount <= 0 || !dueDate) return;
+    if (!counterpart || parsedAmount <= 0 || !dueDate || !accountId || !category) return;
 
     addLoan({
       type,
@@ -34,10 +65,12 @@ export function LoanFormModal({ onClose, initialCounterpart = '', initialType = 
       amount: parsedAmount,
       date,
       dueDate,
-      description: description || (type === 'lent' ? 'Valor emprestado' : 'Valor pego emprestado')
+      description: description || (type === 'lent' ? 'Valor emprestado' : 'Valor pego emprestado'),
+      accountId,
+      category
     });
 
-    onClose();
+    handleClose();
   };
 
   const title = initialCounterpart
@@ -49,14 +82,14 @@ export function LoanFormModal({ onClose, initialCounterpart = '', initialType = 
     : 'Registre dinheiro emprestado ou que você pegou emprestado.';
 
   return createPortal(
-    <div className="modal-overlay" onClick={onClose}>
+    <div className={`modal-overlay ${isClosing ? 'closing' : ''}`} onClick={handleClose}>
       <div className="modal-container loan-form-modal-container" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="modal-header-content">
             <h3>{title}</h3>
             <p>{subtitle}</p>
           </div>
-          <button className="close-btn" onClick={onClose} title="Fechar">
+          <button className="close-btn" onClick={handleClose} title="Fechar">
             <X size={18} />
           </button>
         </div>
@@ -127,6 +160,26 @@ export function LoanFormModal({ onClose, initialCounterpart = '', initialType = 
           </div>
 
           <div className="form-group">
+            <label>Conta Vinculada</label>
+            <CustomSelect
+              value={accountId}
+              onChange={(e) => setAccountId(e.target.value)}
+              options={activeAccounts.map(a => ({ value: a.id, label: a.name }))}
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Categoria</label>
+            <CustomSelect
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              options={categories
+                .filter(c => c.active !== false && c.type === (type === 'lent' ? 'expense' : 'income'))
+                .map(c => ({ value: c.name, label: c.name }))}
+            />
+          </div>
+
+          <div className="form-group">
             <label>Valor</label>
             <div className="amount-input-wrapper">
               <span className="currency-prefix">R$</span>
@@ -160,7 +213,7 @@ export function LoanFormModal({ onClose, initialCounterpart = '', initialType = 
         </form>
 
         <div className="modal-footer">
-          <Button variant="secondary" onClick={onClose} type="button">Cancelar</Button>
+          <Button variant="secondary" onClick={handleClose} type="button">Cancelar</Button>
           <Button variant="primary" onClick={handleSubmit}>Criar Registro</Button>
         </div>
       </div>

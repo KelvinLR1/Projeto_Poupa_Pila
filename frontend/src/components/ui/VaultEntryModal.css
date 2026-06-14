@@ -16,7 +16,7 @@
   width: 100%;
   max-width: 540px;
   max-height: 90vh;
-  overflow-y: auto;
+  overflow: visible !important;
   background: linear-gradient(160deg, rgba(28, 28, 32, 0.98) 0%, rgba(16, 16, 18, 0.99) 100%);
   border: 1px solid var(--border-highlight);
   border-radius: var(--radius-lg);
@@ -197,4 +197,11 @@
 .vault-color-swatch.selected {
   border-color: #fff;
   transform: scale(1.15);
+}
+
+@media (max-width: 768px) {
+  .vault-modal {
+    max-height: 100% !important;
+    overflow-y: auto !important;
+  }
 }

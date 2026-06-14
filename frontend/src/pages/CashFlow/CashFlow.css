@@ -190,7 +190,7 @@
 }
 
 /* Tooltip */
-.chart-tooltip {
+.cashflow-chart-tooltip {
   position: absolute;
   transform: translate(-50%, -100%);
   padding: 12px;

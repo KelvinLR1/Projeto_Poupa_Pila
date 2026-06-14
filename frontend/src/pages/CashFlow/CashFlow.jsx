@@ -366,7 +366,7 @@ export function CashFlow() {
           {/* Tooltip do Gráfico */}
           {hoveredPoint && (
             <div 
-              className="chart-tooltip glass-card"
+              className="cashflow-chart-tooltip glass-card"
               style={{
                 left: `${(hoveredPoint.x / chartPathData.width) * 100}%`,
                 top: `${(hoveredPoint.y / chartPathData.height) * 100 - 15}%`

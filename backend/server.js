@@ -307,6 +307,7 @@ app.get('/api/finance/data', authenticate, (req, res) => {
 
     // 4. Categorias do usuário
     const categories = db.prepare('SELECT * FROM categories WHERE user_id = ?').all(req.user.id);
+    const formattedCategories = categories.map(c => ({ ...c, active: c.active !== 0 }));
 
     // 5. Limites de Gastos / Orçamentos
     const categoryLimits = db.prepare('SELECT * FROM category_limits WHERE user_id = ?').all(req.user.id);
@@ -315,7 +316,7 @@ app.get('/api/finance/data', authenticate, (req, res) => {
       accounts: formattedAccounts,
       transactions: formattedTransactions,
       loans: formattedLoans,
-      categories,
+      categories: formattedCategories,
       categoryLimits
     });
   } catch (error) {
@@ -801,8 +802,8 @@ function recalculateLoanState(loan, historyItems) {
 }
 
 app.post('/api/finance/loans', authenticate, (req, res) => {
-  const { id, type, counterpart, amount, date, dueDate, description, title } = req.body;
-  if (!counterpart || amount === undefined || !type) {
+  const { id, type, counterpart, amount, date, dueDate, description, title, accountId, category } = req.body;
+  if (!counterpart || amount === undefined || !type || !accountId || !category) {
     return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
   }
 
@@ -816,13 +817,32 @@ app.post('/api/finance/loans', authenticate, (req, res) => {
     const historyId = Math.random().toString(36).substr(2, 9);
     const dateStr = date || new Date().toISOString().split('T')[0];
 
+    // Cria transação correspondente no extrato
+    const txId = Math.random().toString(36).substr(2, 9);
+    const txType = type === 'lent' ? 'expense' : 'income';
+    
+    // Ajusta saldo da conta
+    const amountChange = txType === 'income' ? parseFloat(amount) : -parseFloat(amount);
+    const updateBalance = db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ?');
+    updateBalance.run(amountChange, accountId, req.user.id);
+
+    // Insere transação no extrato
+    const insertTx = db.prepare(`
+      INSERT INTO transactions (id, user_id, accountId, type, amount, category, description, date, status, is_forecast)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'paid', 0)
+    `);
+    const txDescription = type === 'lent'
+      ? `Empréstimo feito para ${counterpart.trim()}${title ? ` (${title})` : ''}`
+      : `Empréstimo pego com ${counterpart.trim()}${title ? ` (${title})` : ''}`;
+    insertTx.run(txId, req.user.id, accountId, txType, parseFloat(amount), category, description || txDescription, dateStr);
+
     if (existingLoan) {
       // 1. Insere histórico
       const insertHistory = db.prepare(`
-        INSERT INTO loan_history (id, loan_id, type, amount, date, dueDate, description, direction)
-        VALUES (?, ?, 'loan', ?, ?, ?, ?, ?)
+        INSERT INTO loan_history (id, loan_id, type, amount, date, dueDate, description, direction, transaction_id)
+        VALUES (?, ?, 'loan', ?, ?, ?, ?, ?, ?)
       `);
-      insertHistory.run(historyId, existingLoan.id, parseFloat(amount), dateStr, dueDate || null, description || 'Empréstimo adicional', type);
+      insertHistory.run(historyId, existingLoan.id, parseFloat(amount), dateStr, dueDate || null, description || 'Empréstimo adicional', type, txId);
 
       // 2. Busca histórico completo para recalcular
       const history = db.prepare('SELECT * FROM loan_history WHERE loan_id = ?').all(existingLoan.id);
@@ -849,10 +869,10 @@ app.post('/api/finance/loans', authenticate, (req, res) => {
       insertNewLoan.run(newLoanId, req.user.id, type, counterpart.trim(), parseFloat(amount), 0, dueDate || null, 'active', title || null);
 
       const insertHistory = db.prepare(`
-        INSERT INTO loan_history (id, loan_id, type, amount, date, dueDate, description, direction)
-        VALUES (?, ?, 'loan', ?, ?, ?, ?, ?)
+        INSERT INTO loan_history (id, loan_id, type, amount, date, dueDate, description, direction, transaction_id)
+        VALUES (?, ?, 'loan', ?, ?, ?, ?, ?, ?)
       `);
-      insertHistory.run(historyId, newLoanId, parseFloat(amount), dateStr, dueDate || null, description || 'Empréstimo inicial', type);
+      insertHistory.run(historyId, newLoanId, parseFloat(amount), dateStr, dueDate || null, description || 'Empréstimo inicial', type, txId);
 
       // Recalcula imediatamente (opcional mas garante consistência)
       const history = db.prepare('SELECT * FROM loan_history WHERE loan_id = ?').all(newLoanId);
@@ -877,10 +897,10 @@ app.post('/api/finance/loans', authenticate, (req, res) => {
 
 app.post('/api/finance/loans/:id/pay', authenticate, (req, res) => {
   const { id } = req.params;
-  const { amount, date, description } = req.body;
+  const { amount, date, description, accountId, category } = req.body;
 
-  if (amount === undefined) {
-    return res.status(400).json({ error: 'Valor de pagamento é obrigatório.' });
+  if (amount === undefined || !accountId || !category) {
+    return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
   }
 
   try {
@@ -896,12 +916,31 @@ app.post('/api/finance/loans/:id/pay', authenticate, (req, res) => {
     const historyId = Math.random().toString(36).substr(2, 9);
     const dateStr = date || new Date().toISOString().split('T')[0];
 
+    // Cria transação correspondente no extrato
+    const txId = Math.random().toString(36).substr(2, 9);
+    const txType = loan.type === 'lent' ? 'income' : 'expense';
+
+    // Ajusta saldo da conta
+    const amountChange = txType === 'income' ? parseFloat(amount) : -parseFloat(amount);
+    const updateBalance = db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ?');
+    updateBalance.run(amountChange, accountId, req.user.id);
+
+    // Insere transação no extrato
+    const insertTx = db.prepare(`
+      INSERT INTO transactions (id, user_id, accountId, type, amount, category, description, date, status, is_forecast)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'paid', 0)
+    `);
+    const txDescription = loan.type === 'lent'
+      ? `Recebimento de parcela de ${loan.counterpart}`
+      : `Pagamento de parcela para ${loan.counterpart}`;
+    insertTx.run(txId, req.user.id, accountId, txType, parseFloat(amount), category, description || txDescription, dateStr);
+
     // Adiciona histórico de pagamento
     const insertHistory = db.prepare(`
-      INSERT INTO loan_history (id, loan_id, type, amount, date, dueDate, description, direction)
-      VALUES (?, ?, 'payment', ?, ?, null, ?, ?)
+      INSERT INTO loan_history (id, loan_id, type, amount, date, dueDate, description, direction, transaction_id)
+      VALUES (?, ?, 'payment', ?, ?, null, ?, ?, ?)
     `);
-    insertHistory.run(historyId, id, parseFloat(amount), dateStr, description || 'Pagamento recebido/efetuado', loan.type);
+    insertHistory.run(historyId, id, parseFloat(amount), dateStr, description || 'Pagamento recebido/efetuado', loan.type, txId);
 
     // Recalcula empréstimo
     const history = db.prepare('SELECT * FROM loan_history WHERE loan_id = ?').all(id);
@@ -946,6 +985,26 @@ app.post('/api/finance/loans/:id/toggle-type', authenticate, (req, res) => {
       const currentDir = item.direction || loan.type;
       const newDir = currentDir === 'lent' ? 'borrowed' : 'lent';
       updateHistoryItem.run(newDir, item.id);
+
+      // Inverte a transação correspondente no extrato se existir
+      if (item.transaction_id) {
+        const selectTx = db.prepare('SELECT * FROM transactions WHERE id = ? AND user_id = ?');
+        const tx = selectTx.all(item.transaction_id, req.user.id)[0];
+        if (tx) {
+          const oldType = tx.type;
+          const newType = oldType === 'income' ? 'expense' : 'income';
+          const newCategory = newType === 'income' ? 'Recebimento de Empréstimo' : 'Empréstimo';
+          
+          // Reverte o saldo da transação antiga e aplica o novo saldo
+          const balanceAdjustment = oldType === 'income' ? -2 * tx.amount : 2 * tx.amount;
+          
+          db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ?')
+            .run(balanceAdjustment, tx.accountId, req.user.id);
+            
+          db.prepare('UPDATE transactions SET type = ?, category = ? WHERE id = ?')
+            .run(newType, newCategory, tx.id);
+        }
+      }
     });
 
     const newLoanType = loan.type === 'lent' ? 'borrowed' : 'lent';
@@ -989,6 +1048,20 @@ app.delete('/api/finance/loans/history/:historyId', authenticate, (req, res) => 
       return res.status(403).json({ error: 'Acesso negado.' });
     }
     
+    // Se houver transação associada, deleta e reverte o saldo da conta
+    if (historyItem.transaction_id) {
+      const selectTx = db.prepare('SELECT * FROM transactions WHERE id = ? AND user_id = ?');
+      const tx = selectTx.all(historyItem.transaction_id, req.user.id)[0];
+      if (tx) {
+        const amountChange = tx.type === 'income' ? -tx.amount : tx.amount;
+        const updateBalance = db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ?');
+        updateBalance.run(amountChange, tx.accountId, req.user.id);
+        
+        const deleteTx = db.prepare('DELETE FROM transactions WHERE id = ?');
+        deleteTx.run(tx.id);
+      }
+    }
+
     // Exclui o item do histórico
     const deleteHistory = db.prepare('DELETE FROM loan_history WHERE id = ?');
     deleteHistory.run(historyId);
@@ -1003,7 +1076,7 @@ app.delete('/api/finance/loans/history/:historyId', authenticate, (req, res) => 
       db.exec('COMMIT');
       return res.json({ success: true, loanDeleted: true });
     } else {
-      // Caso contrário, recalcula o estado do empréstimo
+      // Recalcula o estado do empréstimo
       const newState = recalculateLoanState(loan, remainingHistory);
       const updateLoan = db.prepare(`
         UPDATE loans
@@ -1109,16 +1182,20 @@ app.post('/api/finance/categories', authenticate, (req, res) => {
 
   try {
     const trimmedName = name.trim();
-    const exists = db.prepare('SELECT id FROM categories WHERE user_id = ? AND LOWER(TRIM(name)) = LOWER(TRIM(?)) AND type = ?').all(req.user.id, trimmedName, type)[0];
+    const exists = db.prepare('SELECT id, active FROM categories WHERE user_id = ? AND LOWER(TRIM(name)) = LOWER(TRIM(?)) AND type = ?').all(req.user.id, trimmedName, type)[0];
     if (exists) {
+      if (exists.active === 0) {
+        db.prepare('UPDATE categories SET active = 1, rule_type = ? WHERE id = ?').run(rule_type || null, exists.id);
+        return res.json({ success: true, category: { id: exists.id, name: trimmedName, type, rule_type: rule_type || null, active: true } });
+      }
       return res.status(400).json({ error: 'Esta categoria já existe.' });
     }
 
     const newId = id || Math.random().toString(36).substr(2, 9);
-    const insert = db.prepare('INSERT INTO categories (id, user_id, name, type, rule_type) VALUES (?, ?, ?, ?, ?)');
+    const insert = db.prepare('INSERT INTO categories (id, user_id, name, type, rule_type, active) VALUES (?, ?, ?, ?, ?, 1)');
     insert.run(newId, req.user.id, trimmedName, type, rule_type || null);
 
-    res.json({ success: true, category: { id: newId, name: trimmedName, type, rule_type: rule_type || null } });
+    res.json({ success: true, category: { id: newId, name: trimmedName, type, rule_type: rule_type || null, active: true } });
   } catch (error) {
     console.error('Erro ao adicionar categoria:', error);
     res.status(500).json({ error: 'Erro ao adicionar categoria.' });
@@ -1154,11 +1231,21 @@ app.delete('/api/finance/categories/:id', authenticate, (req, res) => {
       return res.status(404).json({ error: 'Categoria não encontrada.' });
     }
 
-    db.prepare('DELETE FROM categories WHERE id = ?').run(id);
-    res.json({ success: true });
+    // Verifica se existem transações vinculadas a esta categoria
+    const txCheck = db.prepare('SELECT COUNT(*) as count FROM transactions WHERE user_id = ? AND LOWER(TRIM(category)) = LOWER(TRIM(?))').all(req.user.id, category.name)[0];
+
+    if (txCheck && txCheck.count > 0) {
+      // Inativa em vez de deletar
+      db.prepare('UPDATE categories SET active = 0 WHERE id = ?').run(id);
+      res.json({ success: true, deactivated: true });
+    } else {
+      // Deleta fisicamente
+      db.prepare('DELETE FROM categories WHERE id = ?').run(id);
+      res.json({ success: true, deleted: true });
+    }
   } catch (error) {
-    console.error('Erro ao deletar categoria:', error);
-    res.status(500).json({ error: 'Erro ao deletar categoria.' });
+    console.error('Erro ao deletar/inativar categoria:', error);
+    res.status(500).json({ error: 'Erro ao processar remoção da categoria.' });
   }
 });
 
