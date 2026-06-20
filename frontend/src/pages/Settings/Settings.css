@@ -58,6 +58,10 @@
   gap: 28px;
 }
 
+.grid-colspan-2 {
+  grid-column: span 2;
+}
+
 .settings-card {
   padding: 28px;
   border-radius: 18px;
@@ -686,207 +690,101 @@
   .tab-pane-grid {
     grid-template-columns: 1fr;
   }
-}
-@media (max-width: 768px) {
-  .backup-actions {
-    grid-template-columns: 1fr !important;
-  }
-}
-
-  width: 100%;
-  padding-right: 44px;
-}
-
-.password-eye-btn {
-  position: absolute;
-  right: 12px;
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  padding: 4px;
-  border-radius: 4px;
-  transition: color 0.2s ease;
-}
-
-.password-eye-btn:hover {
-  color: var(--text-primary);
-}
-
-.field-hint {
-  display: block;
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  margin-top: 6px;
-  line-height: 1.4;
-}
-
-.form-group label {
-  display: flex;
-  align-items: center;
-}
-
-/* ── Access control form ───────────────────────────────────── */
-.access-banner {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  border-radius: 10px;
-  font-size: 0.88rem;
-  font-weight: 500;
-}
-
-.access-banner--error {
-  background: rgba(244, 63, 94, 0.08);
-  border: 1px solid rgba(244, 63, 94, 0.2);
-  color: #f43f5e;
-}
-
-.access-banner--success {
-  background: rgba(16, 185, 129, 0.08);
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  color: var(--accent-emerald);
-}
-
-/* Permission toggle cards */
-.permission-toggle-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-top: 6px;
-}
-
-.permission-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
-  cursor: pointer;
-  text-align: left;
-  transition: all 0.2s ease;
-  color: var(--text-secondary);
-}
-
-.permission-card:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.12);
-  color: var(--text-primary);
-  transform: translateY(-2px);
-}
-
-.permission-card strong {
-  display: block;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 2px;
-}
-
-.permission-card p {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--text-muted);
-}
-
-.permission-card .perm-icon {
-  flex-shrink: 0;
-  opacity: 0.5;
-  transition: opacity 0.2s ease, color 0.2s ease;
-}
-
-/* Green active — read/write */
-.permission-card.active-rw {
-  background: rgba(16, 185, 129, 0.08);
-  border-color: rgba(16, 185, 129, 0.35);
-  color: var(--text-primary);
-  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.08);
-}
-
-.permission-card.active-rw .perm-icon {
-  color: var(--accent-emerald);
-  opacity: 1;
-}
-
-/* Amber active — read only */
-.permission-card.active-ro {
-  background: rgba(245, 158, 11, 0.08);
-  border-color: rgba(245, 158, 11, 0.35);
-  color: var(--text-primary);
-  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.08);
-}
-
-.permission-card.active-ro .perm-icon {
-  color: #f59e0b;
-  opacity: 1;
-}
-
-/* Submit button */
-.access-submit-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
-  background: var(--accent-emerald);
-  border: none;
-  border-radius: 10px;
-  color: #000;
-  font-size: 0.9rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  align-self: flex-start;
-  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.25);
-}
-
-.access-submit-btn:hover {
-  opacity: 0.9;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
-}
-
-/* ── Media queries ───────────────────────────────────────── */
-.mt-12 { margin-top: 12px; }
-.mt-32 { margin-top: 32px; }
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.revoke-btn {
-  background: none;
-  border: none;
-  color: #f43f5e;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.85rem;
-  padding: 6px 12px;
-  border-radius: 8px;
-  transition: all var(--transition-fast) ease;
-}
-
-.revoke-btn:hover {
-  background: rgba(244, 63, 94, 0.08);
-}
-
-@media (max-width: 1024px) {
-  .tab-pane-grid {
-    grid-template-columns: 1fr;
+  .grid-colspan-2 {
+    grid-column: span 1;
   }
 }
 @media (max-width: 768px) {
   .backup-actions {
     grid-template-columns: 1fr !important;
   }
+  
+  .settings-card {
+    padding: 20px !important;
+  }
+
+  .theme-toggle-group {
+    width: 100% !important;
+    display: flex;
+    flex-direction: row !important;
+    gap: 4px !important;
+    background: rgba(15, 15, 20, 0.4) !important;
+    border: 1px solid var(--border-color) !important;
+    padding: 3px !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4) !important;
+    border-radius: 12px !important;
+  }
+
+  .theme-toggle-group .theme-btn {
+    flex: 1 !important;
+    min-width: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    border-radius: 9px !important;
+    justify-content: center !important;
+    padding: 8px 4px !important;
+    font-size: 0.8rem !important;
+  }
+
+  .theme-toggle-group .theme-btn.active {
+    background: var(--accent-emerald) !important;
+    color: #020617 !important;
+    border-color: transparent !important;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35) !important;
+  }
+
+  /* 50/30/20 Buttons row wraps nicely on very small screens */
+  .settings-form .form-group:nth-of-type(3) .theme-toggle-group {
+    flex-direction: column !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    gap: 6px !important;
+    width: 100% !important;
+  }
+
+  .settings-form .form-group:nth-of-type(3) .theme-toggle-group .theme-btn {
+    flex: none !important;
+    width: 100% !important;
+    border: 1px solid var(--border-color) !important;
+    background: rgba(255, 255, 255, 0.02) !important;
+    border-radius: 8px !important;
+    padding: 10px 8px !important;
+  }
+
+  .settings-form .form-group:nth-of-type(3) .theme-toggle-group .theme-btn.active {
+    background: var(--accent-emerald) !important;
+    color: #020617 !important;
+    border-color: var(--accent-emerald) !important;
+  }
+
+  /* Adjust spacing for category item table row on mobile */
+  .category-item-row {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .cat-item-col-type {
+    width: auto !important;
+  }
+
+  .cat-item-col-actions {
+    width: 100% !important;
+    justify-content: space-between !important;
+    gap: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    padding-top: 8px;
+  }
+
+  .cat-item-rule-select {
+    flex: 1;
+    width: auto !important;
+  }
 }
+
 
 /* Transição suave de abas */
 .settings-tab-pane {
@@ -1045,3 +943,239 @@
   background: rgba(244, 63, 94, 0.1);
   color: var(--accent-coral, #f43f5e);
 }
+
+/* Card layout structure to support stretching lists */
+.settings-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.categories-list-container,
+.limits-list-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 250px;
+  margin-top: 16px;
+}
+
+.categories-list-scroll,
+.limits-list-scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding-right: 6px;
+}
+
+.categories-list-scroll {
+  gap: 16px;
+}
+
+.limits-list-scroll {
+  gap: 12px;
+}
+
+/* Custom styling for beautiful, premium input range sliders */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  outline: none;
+  margin: 12px 0;
+  transition: background 0.3s ease;
+}
+
+input[type="range"]:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Chrome, Safari, Opera, Edge */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent-emerald, #10b981);
+  cursor: pointer;
+  box-shadow: 0 0 10px var(--accent-emerald-glow, rgba(16, 185, 129, 0.5));
+  transition: transform 0.1s ease, background 0.3s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+  background: var(--accent-emerald, #10b981);
+}
+
+/* Firefox */
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent-emerald, #10b981);
+  cursor: pointer;
+  box-shadow: 0 0 10px var(--accent-emerald-glow, rgba(16, 185, 129, 0.5));
+  transition: transform 0.1s ease, background 0.3s ease;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+  transform: scale(1.25);
+}
+
+/* Custom Settings Confirmation Modals */
+.settings-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 9999; /* Ensure it is on top of everything */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: settingsModalFadeIn 0.2s ease-out forwards;
+}
+
+.settings-modal {
+  width: 100%;
+  max-width: 480px;
+  background: linear-gradient(160deg, rgba(30, 30, 36, 0.98) 0%, rgba(18, 18, 22, 0.99) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  animation: settingsModalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Red-themed border for critical warning modals */
+.settings-modal.danger-modal {
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(244, 63, 94, 0.1);
+}
+
+.settings-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.settings-modal-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.settings-modal-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.settings-modal-close:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+}
+
+.settings-modal-body {
+  padding: 24px;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.settings-modal-body p {
+  margin: 0 0 16px 0;
+}
+
+.settings-modal-body p:last-child {
+  margin-bottom: 0;
+}
+
+.settings-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.settings-modal-btn-cancel {
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.settings-modal-btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.settings-modal-btn-confirm {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #000;
+  background: var(--accent-emerald, #10b981);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.settings-modal-btn-confirm:hover {
+  opacity: 0.9;
+}
+
+.settings-modal-btn-danger {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--accent-coral, #f43f5e);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(244, 63, 94, 0.2);
+}
+
+.settings-modal-btn-danger:hover {
+  background: #e11d48;
+  box-shadow: 0 6px 16px rgba(244, 63, 94, 0.35);
+}
+
+@keyframes settingsModalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes settingsModalSlideUp {
+  from { transform: translateY(20px) scale(0.96); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+

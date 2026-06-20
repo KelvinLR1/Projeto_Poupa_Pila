@@ -2,7 +2,7 @@ const { DatabaseSync } = require('node:sqlite');
 const path = require('node:path');
 const cryptoUtils = require('./crypto');
 
-const dbPath = path.join(__dirname, 'poupa_pila.db');
+const dbPath = process.env.DATABASE_PATH || path.join(__dirname, 'poupa_pila.db');
 const db = new DatabaseSync(dbPath);
 
 // Habilita chaves estrangeiras
@@ -252,22 +252,13 @@ function seedUserCategories(userId) {
       const defaults = [
         // Receitas (incomes)
         { name: 'Salário', type: 'income', rule_type: null },
-        { name: 'Investimentos', type: 'income', rule_type: null },
-        { name: 'Presentes', type: 'income', rule_type: null },
         { name: 'Receita', type: 'income', rule_type: null },
         { name: 'Recebimento de Empréstimo', type: 'income', rule_type: null },
         { name: 'Transferência', type: 'income', rule_type: null },
         // Despesas (expenses)
-        { name: 'Alimentação', type: 'expense', rule_type: 'necessity' },
-        { name: 'Moradia', type: 'expense', rule_type: 'necessity' },
-        { name: 'Transporte', type: 'expense', rule_type: 'necessity' },
-        { name: 'Lazer', type: 'expense', rule_type: 'want' },
-        { name: 'Saúde', type: 'expense', rule_type: 'necessity' },
-        { name: 'Educação', type: 'expense', rule_type: 'necessity' },
         { name: 'Despesa', type: 'expense', rule_type: 'want' },
         { name: 'Empréstimo', type: 'expense', rule_type: 'want' },
-        { name: 'Transferência', type: 'expense', rule_type: null },
-        { name: 'Outros', type: 'expense', rule_type: 'want' }
+        { name: 'Transferência', type: 'expense', rule_type: null }
       ];
       defaults.forEach(cat => {
         const catId = Math.random().toString(36).substr(2, 9);
@@ -292,88 +283,88 @@ function seedDefaultData(userId, isClean = false) {
     VALUES (?, ?, ?, ?, ?, ?, 1)
   `);
   if (isClean) {
-    insertAccount.run('1', userId, 'Carteira', 'wallet', 0.0, '#10b981');
+    insertAccount.run(userId + '_1', userId, 'Carteira', 'wallet', 0.0, '#10b981');
     return;
   }
-  insertAccount.run('1', userId, 'Nubank', 'checking', 4500.50, '#8A05BE');
-  insertAccount.run('2', userId, 'Itaú', 'checking', 1200.00, '#EC7000');
-  insertAccount.run('3', userId, 'Carteira', 'wallet', 150.00, '#10b981');
+  insertAccount.run(userId + '_1', userId, 'Nubank', 'checking', 4500.50, '#8A05BE');
+  insertAccount.run(userId + '_2', userId, 'Itaú', 'checking', 1200.00, '#EC7000');
+  insertAccount.run(userId + '_3', userId, 'Carteira', 'wallet', 150.00, '#10b981');
 
   // ─── transações ───
   const insertTransaction = db.prepare(`
     INSERT INTO transactions (id, user_id, accountId, type, amount, category, description, date, status)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
-  insertTransaction.run('1', userId, '1', 'income', 5000.00, 'Salário', 'Salário Mensal', '2026-06-01', 'paid');
-  insertTransaction.run('2', userId, '1', 'expense', 150.00, 'Alimentação', 'Mercado', '2026-06-02', 'paid');
-  insertTransaction.run('3', userId, '2', 'expense', 1200.00, 'Moradia', 'Aluguel', '2026-06-05', 'pending');
-  insertTransaction.run('4', userId, '1', 'expense', 80.00, 'Lazer', 'Netflix', '2026-06-10', 'pending');
+  insertTransaction.run(userId + '_tx1', userId, userId + '_1', 'income', 5000.00, 'Salário', 'Salário Mensal', '2026-06-01', 'paid');
+  insertTransaction.run(userId + '_tx2', userId, userId + '_1', 'expense', 150.00, 'Alimentação', 'Mercado', '2026-06-02', 'paid');
+  insertTransaction.run(userId + '_tx3', userId, userId + '_2', 'expense', 1200.00, 'Moradia', 'Aluguel', '2026-06-05', 'pending');
+  insertTransaction.run(userId + '_tx4', userId, userId + '_1', 'expense', 80.00, 'Lazer', 'Netflix', '2026-06-10', 'pending');
 
   // ─── settlements ───
   const insertSettlement = db.prepare(`
     INSERT INTO settlements (id, transaction_id, date, amount, accountId)
     VALUES (?, ?, ?, ?, ?)
   `);
-  insertSettlement.run('s1', '1', '2026-06-01', 5000.00, '1');
-  insertSettlement.run('s2', '2', '2026-06-02', 150.00, '1');
+  insertSettlement.run(userId + '_s1', userId + '_tx1', '2026-06-01', 5000.00, userId + '_1');
+  insertSettlement.run(userId + '_s2', userId + '_tx2', '2026-06-02', 150.00, userId + '_1');
 
   // ─── empréstimos ───
   const insertLoan = db.prepare(`
     INSERT INTO loans (id, user_id, type, counterpart, totalAmount, paidAmount, dueDate, status)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
-  insertLoan.run('1', userId, 'lent', 'João', 2350.00, 850.00, '2026-07-01', 'active');
-  insertLoan.run('2', userId, 'borrowed', 'Mãe', 500.00, 500.00, '2026-05-20', 'settled');
+  insertLoan.run(userId + '_l1', userId, 'lent', 'João', 2350.00, 850.00, '2026-07-01', 'active');
+  insertLoan.run(userId + '_l2', userId, 'borrowed', 'Mãe', 500.00, 500.00, '2026-05-20', 'settled');
 
   // ─── histórico de empréstimos ───
   const insertLoanHistory = db.prepare(`
     INSERT INTO loan_history (id, loan_id, type, amount, date, dueDate, description, direction)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
-  insertLoanHistory.run('h1', '1', 'loan', 800.00, '2026-04-10', '2026-06-10', 'Empréstimo inicial — aluguel atrasado', 'lent');
-  insertLoanHistory.run('h2', '1', 'payment', 200.00, '2026-04-28', null, 'Devolução parcial (Pix)', 'lent');
-  insertLoanHistory.run('h3', '1', 'loan', 350.00, '2026-05-05', '2026-06-30', 'Valor extra — conta de luz', 'lent');
-  insertLoanHistory.run('h4', '1', 'payment', 300.00, '2026-05-15', null, 'Pagamento de maio', 'lent');
-  insertLoanHistory.run('h5', '1', 'loan', 500.00, '2026-05-22', '2026-07-01', 'Conserto do carro', 'lent');
-  insertLoanHistory.run('h6', '1', 'loan', 400.00, '2026-06-01', '2026-07-01', 'Mercado + remédio', 'lent');
-  insertLoanHistory.run('h7', '1', 'payment', 350.00, '2026-06-03', null, 'Pix de hoje', 'lent');
-  insertLoanHistory.run('h8', '1', 'loan', 300.00, '2026-06-03', '2026-07-15', 'Passagem de ônibus (mês)', 'lent');
+  insertLoanHistory.run(userId + '_h1', userId + '_l1', 'loan', 800.00, '2026-04-10', '2026-06-10', 'Empréstimo inicial — aluguel atrasado', 'lent');
+  insertLoanHistory.run(userId + '_h2', userId + '_l1', 'payment', 200.00, '2026-04-28', null, 'Devolução parcial (Pix)', 'lent');
+  insertLoanHistory.run(userId + '_h3', userId + '_l1', 'loan', 350.00, '2026-05-05', '2026-06-30', 'Valor extra — conta de luz', 'lent');
+  insertLoanHistory.run(userId + '_h4', userId + '_l1', 'payment', 300.00, '2026-05-15', null, 'Pagamento de maio', 'lent');
+  insertLoanHistory.run(userId + '_h5', userId + '_l1', 'loan', 500.00, '2026-05-22', '2026-07-01', 'Conserto do carro', 'lent');
+  insertLoanHistory.run(userId + '_h6', userId + '_l1', 'loan', 400.00, '2026-06-01', '2026-07-01', 'Mercado + remédio', 'lent');
+  insertLoanHistory.run(userId + '_h7', userId + '_l1', 'payment', 350.00, '2026-06-03', null, 'Pix de hoje', 'lent');
+  insertLoanHistory.run(userId + '_h8', userId + '_l1', 'loan', 300.00, '2026-06-03', '2026-07-15', 'Passagem de ônibus (mês)', 'lent');
   
-  insertLoanHistory.run('h9', '2', 'loan', 500.00, '2026-05-01', '2026-05-20', 'Conserto do carro', 'borrowed');
-  insertLoanHistory.run('h10', '2', 'payment', 500.00, '2026-05-15', null, 'Quitação total', 'borrowed');
+  insertLoanHistory.run(userId + '_h9', userId + '_l2', 'loan', 500.00, '2026-05-01', '2026-05-20', 'Conserto do carro', 'borrowed');
+  insertLoanHistory.run(userId + '_h10', userId + '_l2', 'payment', 500.00, '2026-05-15', null, 'Quitação total', 'borrowed');
 
   // ─── cofre de senhas (grupos, subgrupos e credenciais criptografadas) ───
   const insertGroup = db.prepare(`
     INSERT INTO vault_groups (id, user_id, name, color)
     VALUES (?, ?, ?, ?)
   `);
-  insertGroup.run('g1', userId, 'Trabalho', '#6366f1');
-  insertGroup.run('g2', userId, 'Pessoal', '#10b981');
-  insertGroup.run('g3', userId, 'Financeiro', '#f59e0b');
+  insertGroup.run(userId + '_g1', userId, 'Trabalho', '#6366f1');
+  insertGroup.run(userId + '_g2', userId, 'Pessoal', '#10b981');
+  insertGroup.run(userId + '_g3', userId, 'Financeiro', '#f59e0b');
 
   const insertSubgroup = db.prepare(`
     INSERT INTO vault_subgroups (id, group_id, name)
     VALUES (?, ?, ?)
   `);
-  insertSubgroup.run('sg1', 'g1', 'E-mails');
-  insertSubgroup.run('sg2', 'g1', 'Sistemas Internos');
-  insertSubgroup.run('sg3', 'g2', 'Redes Sociais');
+  insertSubgroup.run(userId + '_sg1', userId + '_g1', 'E-mails');
+  insertSubgroup.run(userId + '_sg2', userId + '_g1', 'Sistemas Internos');
+  insertSubgroup.run(userId + '_sg3', userId + '_g2', 'Redes Sociais');
 
   const insertEntry = db.prepare(`
     INSERT INTO vault_entries (id, user_id, group_id, subgroup_id, name, username, password, url, notes)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   // Trabalho -> E-mails
-  insertEntry.run('e1', userId, 'g1', 'sg1', 'Gmail Corporativo', 'kelvin@empresa.com', cryptoUtils.encrypt('G0rp0Email#2024'), 'https://mail.google.com', '');
+  insertEntry.run(userId + '_e1', userId, userId + '_g1', userId + '_sg1', 'Gmail Corporativo', 'kelvin@empresa.com', cryptoUtils.encrypt('G0rp0Email#2024'), 'https://mail.google.com', '');
   // Trabalho -> Sistemas Internos
-  insertEntry.run('e2', userId, 'g1', 'sg2', 'ERP da Empresa', 'kelvin.user', cryptoUtils.encrypt('Erp@Sys2024!'), 'https://erp.empresa.com.br', 'Trocar senha a cada 90 dias');
+  insertEntry.run(userId + '_e2', userId, userId + '_g1', userId + '_sg2', 'ERP da Empresa', 'kelvin.user', cryptoUtils.encrypt('Erp@Sys2024!'), 'https://erp.empresa.com.br', 'Trocar senha a cada 90 dias');
   // Pessoal -> Redes Sociais
-  insertEntry.run('e3', userId, 'g2', 'sg3', 'Instagram', '@kelvin_lr', cryptoUtils.encrypt('Insta@P3ss0al!'), 'https://instagram.com', '');
+  insertEntry.run(userId + '_e3', userId, userId + '_g2', userId + '_sg3', 'Instagram', '@kelvin_lr', cryptoUtils.encrypt('Insta@P3ss0al!'), 'https://instagram.com', '');
   // Pessoal (sem subgrupo)
-  insertEntry.run('e4', userId, 'g2', null, 'Netflix', 'kelvin@gmail.com', cryptoUtils.encrypt('Netf1ix#Casa'), 'https://netflix.com', 'Plano Premium');
+  insertEntry.run(userId + '_e4', userId, userId + '_g2', null, 'Netflix', 'kelvin@gmail.com', cryptoUtils.encrypt('Netf1ix#Casa'), 'https://netflix.com', 'Plano Premium');
   // Financeiro
-  insertEntry.run('e5', userId, 'g3', null, 'Nubank', 'kelvin@gmail.com', cryptoUtils.encrypt('NuB@nk#2024!'), 'https://nubank.com.br', '');
-  insertEntry.run('e6', userId, 'g3', null, 'Itaú Internet Banking', '0001.123456', cryptoUtils.encrypt('It@uBank2024'), 'https://itau.com.br', 'Agência 0001, Conta 123456-7');
+  insertEntry.run(userId + '_e5', userId, userId + '_g3', null, 'Nubank', 'kelvin@gmail.com', cryptoUtils.encrypt('NuB@nk#2024!'), 'https://nubank.com.br', '');
+  insertEntry.run(userId + '_e6', userId, userId + '_g3', null, 'Itaú Internet Banking', '0001.123456', cryptoUtils.encrypt('It@uBank2024'), 'https://itau.com.br', 'Agência 0001, Conta 123456-7');
 }
 
 module.exports = {

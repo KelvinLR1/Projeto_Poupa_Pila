@@ -6,7 +6,7 @@ const VaultContext = createContext();
 const VAULT_COLORS = ['#10b981', '#f43f5e', '#f59e0b', '#6366f1', '#ec4899', '#06b6d4', '#8b5cf6', '#ef4444'];
 
 export function VaultProvider({ children }) {
-  const { token, isAuthenticated } = useAuth();
+  const { token, isAuthenticated, activeWorkspace } = useAuth();
   const [vault, setVault] = useState([]);
 
   const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -29,14 +29,14 @@ export function VaultProvider({ children }) {
     }
   };
 
-  // Carrega ao logar
+  // Carrega ao logar ou mudar workspace
   useEffect(() => {
     if (isAuthenticated && token) {
       fetchVaultData();
     } else {
       setVault([]);
     }
-  }, [isAuthenticated, token]);
+  }, [isAuthenticated, token, activeWorkspace]);
 
   // ─── Groups ───
   const addGroup = async ({ name, color }) => {

@@ -2,6 +2,25 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './styles/tokens.css'
 import './styles/global.css'
+
+// Interceptor global do fetch para injetar os headers de autenticação e workspace
+const originalFetch = window.fetch;
+window.fetch = async (url, options = {}) => {
+  const token = localStorage.getItem('poupa_pila_token');
+  const workspace = localStorage.getItem('poupa_pila_workspace') || 'personal';
+  
+  if (typeof url === 'string' && (url.startsWith('/api/') || url.startsWith('api/'))) {
+    options.headers = options.headers || {};
+    if (token && !options.headers['Authorization']) {
+      options.headers['Authorization'] = `Bearer ${token}`;
+    }
+    if (workspace && !options.headers['X-Workspace-Owner']) {
+      options.headers['X-Workspace-Owner'] = workspace;
+    }
+  }
+  return originalFetch(url, options);
+};
+
 import App from './App.jsx'
 
 // Carregar cor tema customizada se existir no localStorage

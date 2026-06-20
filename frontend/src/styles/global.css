@@ -282,6 +282,17 @@ input[type="submit"]:active,
    GLOBAL MOBILE OVERRIDES
 ═══════════════════════════════════════════════ */
 @media (max-width: 768px) {
+  html {
+    zoom: 1 !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  body {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
   /* Page headers */
   .page-header {
     flex-direction: column;
@@ -375,14 +386,6 @@ input[type="submit"]:active,
   textarea {
     font-size: 16px;
   }
-}
-@media (max-width: 480px) {
-  .page-title {
-    font-size: 1.15rem;
-  }
-
-  /* Prevent iOS zoom on input focus */
-  .form-input,
   .form-select,
   input,
   select,

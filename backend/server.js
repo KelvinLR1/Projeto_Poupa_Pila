@@ -9,8 +9,12 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // CORS - Permitir conexões do frontend (especialmente para o ambiente dev)
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+  : '*';
+
 app.use(cors({
-  origin: '*',
+  origin: allowedOrigins,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -48,17 +52,27 @@ function authenticate(req, res, next) {
     user.isLinked = false;
     user.permissions = 'admin';
 
-    const selectLink = db.prepare('SELECT owner_id, permissions FROM user_access WHERE target_username = ?');
-    const links = selectLink.all(user.username.toLowerCase());
-    if (links.length > 0) {
-      user.id = links[0].owner_id;
-      user.isLinked = true;
-      user.permissions = links[0].permissions || 'read_write';
-      
-      const ownerQuery = db.prepare('SELECT name FROM users WHERE id = ?');
-      const owners = ownerQuery.all(links[0].owner_id);
-      if (owners.length > 0) {
-        user.ownerName = owners[0].name;
+    const requestedWorkspace = req.headers['x-workspace-owner'];
+    if (requestedWorkspace && requestedWorkspace !== 'personal') {
+      const ownerId = parseInt(requestedWorkspace, 10);
+      if (!isNaN(ownerId)) {
+        const selectLink = db.prepare('SELECT owner_id, permissions FROM user_access WHERE target_username = ? AND owner_id = ?');
+        const links = selectLink.all(user.username.toLowerCase(), ownerId);
+        if (links.length > 0) {
+          user.id = links[0].owner_id;
+          user.isLinked = true;
+          user.permissions = links[0].permissions || 'read_write';
+          
+          const ownerQuery = db.prepare('SELECT name FROM users WHERE id = ?');
+          const owners = ownerQuery.all(links[0].owner_id);
+          if (owners.length > 0) {
+            user.ownerName = owners[0].name;
+          }
+        } else {
+          return res.status(403).json({ error: 'Acesso negado a esta conta compartilhada.' });
+        }
+      } else {
+        return res.status(400).json({ error: 'Workspace inválido.' });
       }
     }
 
@@ -67,11 +81,9 @@ function authenticate(req, res, next) {
 
     // Se for apenas leitura e tentar modificar dados em rotas restritas
     const isWrite = ['POST', 'PUT', 'DELETE'].includes(req.method);
-    const isRestrictedPath = req.path.startsWith('/api/accounts') ||
-                             req.path.startsWith('/api/transactions') ||
-                             req.path.startsWith('/api/loans') ||
+    const isRestrictedPath = req.path.startsWith('/api/finance') ||
                              req.path.startsWith('/api/vault') ||
-                             req.path.startsWith('/api/settings');
+                             (req.path.startsWith('/api/settings') && req.path !== '/api/settings/change-password');
 
     if (user.isLinked && user.permissions === 'read_only' && isWrite && isRestrictedPath) {
       return res.status(403).json({ 
@@ -192,9 +204,81 @@ app.post('/api/auth/logout', authenticate, (req, res) => {
     res.status(500).json({ error: 'Erro interno no servidor.' });
   }
 });
-
 app.get('/api/auth/me', authenticate, (req, res) => {
   res.json({ user: req.user });
+});
+
+app.get('/api/auth/workspaces', authenticate, (req, res) => {
+  try {
+    const userId = req.user.original_id || req.user.id;
+    const username = req.user.username.toLowerCase();
+
+    // 1. Sua conta pessoal
+    const workspaces = [
+      {
+        id: 'personal',
+        name: 'Minha Conta Pessoal',
+        ownerId: userId,
+        isLinked: false,
+        permissions: 'admin'
+      }
+    ];
+
+    // 2. Contas compartilhadas
+    const links = db.prepare('SELECT owner_id, permissions FROM user_access WHERE target_username = ?').all(username);
+    for (const link of links) {
+      const owner = db.prepare('SELECT name FROM users WHERE id = ?').all(link.owner_id);
+      if (owner.length > 0) {
+        workspaces.push({
+          id: String(link.owner_id),
+          name: `Conta de ${owner[0].name}`,
+          ownerId: link.owner_id,
+          isLinked: true,
+          permissions: link.permissions || 'read_write'
+        });
+      }
+    }
+
+    res.json(workspaces);
+  } catch (error) {
+    console.error('Erro ao buscar workspaces:', error);
+    res.status(500).json({ error: 'Erro ao buscar áreas de trabalho.' });
+  }
+});
+app.post('/api/settings/change-password', authenticate, (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'Senha atual e nova senha são obrigatórias.' });
+  }
+
+  if (newPassword.trim().length < 4) {
+    return res.status(400).json({ error: 'A nova senha deve ter pelo menos 4 caracteres.' });
+  }
+
+  const userId = req.user.original_id || req.user.id;
+
+  try {
+    const userQuery = db.prepare('SELECT password_hash FROM users WHERE id = ?');
+    const user = userQuery.all(userId)[0];
+
+    if (!user) {
+      return res.status(404).json({ error: 'Usuário não encontrado.' });
+    }
+
+    const isPasswordValid = cryptoUtils.verifyPassword(currentPassword, user.password_hash);
+    if (!isPasswordValid) {
+      return res.status(400).json({ error: 'Senha atual incorreta.' });
+    }
+
+    const newHash = cryptoUtils.hashPassword(newPassword.trim());
+    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, userId);
+
+    res.json({ success: true, message: 'Senha atualizada com sucesso!' });
+  } catch (error) {
+    console.error('Erro ao alterar senha:', error);
+    res.status(500).json({ error: 'Erro interno no servidor ao alterar senha.' });
+  }
 });
 
 // ─── Rotas de Gerenciamento de Acessos Compartilhados ───
@@ -272,6 +356,196 @@ app.delete('/api/settings/access/:id', authenticate, (req, res) => {
   } catch (error) {
     console.error('Erro ao remover acesso:', error);
     res.status(500).json({ error: 'Erro ao remover acesso.' });
+  }
+});
+
+app.post('/api/settings/clear-data', authenticate, (req, res) => {
+  try {
+    db.exec('BEGIN TRANSACTION');
+    
+    // Exclui todas as contas, transações, empréstimos, cofre e limites do usuário
+    // Mantemos apenas o registro do usuário em si
+    const userId = req.user.id;
+    
+    db.prepare('DELETE FROM accounts WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM transactions WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM loans WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM vault_groups WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM categories WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM category_limits WHERE user_id = ?').run(userId);
+    
+    // Semeia novamente os dados limpos padrão (conta Carteira)
+    const { seedDefaultData } = require('./db');
+    seedDefaultData(userId, true);
+    
+    db.exec('COMMIT');
+    res.json({ success: true, message: 'Todos os lançamentos e dados da conta foram limpos.' });
+  } catch (error) {
+    db.exec('ROLLBACK');
+    console.error('Erro ao limpar dados:', error);
+    res.status(500).json({ error: 'Erro ao limpar dados da conta.' });
+  }
+});
+
+app.post('/api/settings/import-data', authenticate, (req, res) => {
+  const { accounts, transactions, loans } = req.body;
+
+  if (!Array.isArray(accounts) || !Array.isArray(transactions) || !Array.isArray(loans)) {
+    return res.status(400).json({ error: 'Formato de backup inválido.' });
+  }
+
+  const userId = req.user.id;
+
+  try {
+    db.exec('BEGIN TRANSACTION');
+
+    // 1. Limpar dados financeiros atuais do usuário
+    db.prepare('DELETE FROM accounts WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM transactions WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM loans WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM categories WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM category_limits WHERE user_id = ?').run(userId);
+
+    // 2. Semear as categorias essenciais do sistema
+    const { seedUserCategories } = require('./db');
+    seedUserCategories(userId);
+
+    // 3. Cadastrar as categorias adicionais encontradas nas transações do backup
+    const insertCategory = db.prepare('INSERT INTO categories (id, user_id, name, type, active) VALUES (?, ?, ?, ?, 1)');
+    const selectCategory = db.prepare('SELECT id FROM categories WHERE user_id = ? AND LOWER(TRIM(name)) = LOWER(TRIM(?)) AND type = ?');
+
+    transactions.forEach(tx => {
+      if (!tx.category) return;
+      const catName = tx.category.trim();
+      const catType = tx.type;
+      const exists = selectCategory.all(userId, catName, catType)[0];
+      if (!exists) {
+        const catId = Math.random().toString(36).substr(2, 9);
+        insertCategory.run(catId, userId, catName, catType);
+      }
+    });
+
+    // 4. Inserir contas
+    const insertAccount = db.prepare(`
+      INSERT INTO accounts (id, user_id, name, type, balance, color, active)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+    accounts.forEach(acc => {
+      insertAccount.run(
+        acc.id,
+        userId,
+        acc.name.trim(),
+        acc.type,
+        parseFloat(acc.balance),
+        acc.color,
+        acc.active ? 1 : 0
+      );
+    });
+
+    // 5. Inserir transações e seus settlements
+    const insertTx = db.prepare(`
+      INSERT INTO transactions (id, user_id, accountId, type, amount, category, description, date, status, is_forecast, transfer_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const insertSettlement = db.prepare(`
+      INSERT INTO settlements (id, transaction_id, date, amount, accountId)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+
+    transactions.forEach(tx => {
+      insertTx.run(
+        tx.id,
+        userId,
+        tx.accountId,
+        tx.type,
+        parseFloat(tx.amount),
+        tx.category,
+        tx.description || '',
+        tx.date,
+        tx.status,
+        tx.is_forecast ? 1 : 0,
+        tx.transfer_id || null
+      );
+
+      if (Array.isArray(tx.settlements)) {
+        tx.settlements.forEach(s => {
+          insertSettlement.run(
+            s.id,
+            tx.id,
+            s.date,
+            parseFloat(s.amount),
+            s.accountId
+          );
+        });
+      }
+    });
+
+    // 6. Inserir empréstimos e seu histórico
+    const insertLoan = db.prepare(`
+      INSERT INTO loans (id, user_id, type, counterpart, totalAmount, paidAmount, dueDate, status, title)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const insertLoanHistory = db.prepare(`
+      INSERT INTO loan_history (id, loan_id, type, amount, date, dueDate, description, direction, transaction_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    loans.forEach(loan => {
+      insertLoan.run(
+        loan.id,
+        userId,
+        loan.type,
+        loan.counterpart.trim(),
+        parseFloat(loan.totalAmount),
+        parseFloat(loan.paidAmount),
+        loan.dueDate || null,
+        loan.status,
+        loan.title || null
+      );
+
+      if (Array.isArray(loan.history)) {
+        loan.history.forEach(h => {
+          insertLoanHistory.run(
+            h.id,
+            loan.id,
+            h.type,
+            parseFloat(h.amount),
+            h.date,
+            h.dueDate || null,
+            h.description || '',
+            h.direction || loan.type,
+            h.transaction_id || null
+          );
+        });
+      }
+    });
+
+    db.exec('COMMIT');
+    res.json({ success: true, message: 'Backup importado com sucesso!' });
+  } catch (error) {
+    db.exec('ROLLBACK');
+    console.error('Erro ao importar backup:', error);
+    res.status(500).json({ error: 'Erro ao importar os dados do backup.' });
+  }
+});
+
+
+app.delete('/api/settings/account', authenticate, (req, res) => {
+  try {
+    db.exec('BEGIN TRANSACTION');
+    
+    // Como ON DELETE CASCADE está ativo no banco, deletar o usuário
+    // removerá automaticamente todos os dados associados.
+    const userId = req.user.original_id || req.user.id; // Deleta a conta real do dono
+    
+    db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+    
+    db.exec('COMMIT');
+    res.json({ success: true, message: 'Conta excluída com sucesso.' });
+  } catch (error) {
+    db.exec('ROLLBACK');
+    console.error('Erro ao excluir conta:', error);
+    res.status(500).json({ error: 'Erro ao excluir conta.' });
   }
 });
 
@@ -395,6 +669,12 @@ app.post('/api/finance/transactions', authenticate, (req, res) => {
   const { id, accountId, type, amount, category, description, date, status, is_forecast, isInstallment, installments } = req.body;
   if (!id || !accountId || !type || !amount || !category || !date || !status) {
     return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
+  }
+
+  // Validar se a conta pertence ao usuário
+  const accountCheck = db.prepare('SELECT id FROM accounts WHERE id = ? AND user_id = ?').all(accountId, req.user.id)[0];
+  if (!accountCheck) {
+    return res.status(403).json({ error: 'Conta inválida ou não pertence ao usuário.' });
   }
 
   try {
@@ -807,6 +1087,12 @@ app.post('/api/finance/loans', authenticate, (req, res) => {
     return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
   }
 
+  // Validar se a conta pertence ao usuário
+  const accountCheck = db.prepare('SELECT id FROM accounts WHERE id = ? AND user_id = ?').all(accountId, req.user.id)[0];
+  if (!accountCheck) {
+    return res.status(403).json({ error: 'Conta inválida ou não pertence ao usuário.' });
+  }
+
   try {
     db.exec('BEGIN TRANSACTION');
 
@@ -901,6 +1187,12 @@ app.post('/api/finance/loans/:id/pay', authenticate, (req, res) => {
 
   if (amount === undefined || !accountId || !category) {
     return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
+  }
+
+  // Validar se a conta pertence ao usuário
+  const accountCheck = db.prepare('SELECT id FROM accounts WHERE id = ? AND user_id = ?').all(accountId, req.user.id)[0];
+  if (!accountCheck) {
+    return res.status(403).json({ error: 'Conta inválida ou não pertence ao usuário.' });
   }
 
   try {
@@ -1475,6 +1767,23 @@ app.delete('/api/vault/entries/:groupId/:subgroupId/:entryId', authenticate, (re
     res.status(500).json({ error: 'Erro ao excluir credencial.' });
   }
 });
+
+// Servir arquivos estáticos do frontend em produção ou se a pasta dist existir
+const fs = require('node:fs');
+const path = require('node:path');
+const frontendDistPath = path.join(__dirname, '../frontend/dist');
+
+if (process.env.NODE_ENV === 'production' || fs.existsSync(frontendDistPath)) {
+  app.use(express.static(frontendDistPath));
+  
+  // Rota genérica para suporte a roteamento SPA (React Router) no frontend
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api/')) {
+      return next();
+    }
+    res.sendFile(path.join(frontendDistPath, 'index.html'));
+  });
+}
 
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);

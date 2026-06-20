@@ -7,18 +7,22 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(localStorage.getItem('poupa_pila_token') || null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState('');
+  const [activeWorkspace, setActiveWorkspace] = useState(localStorage.getItem('poupa_pila_workspace') || 'personal');
+  const [availableWorkspaces, setAvailableWorkspaces] = useState([]);
 
   // Carrega o usuário e valida o token com o backend ao iniciar
   useEffect(() => {
     const validateToken = async () => {
       const savedToken = localStorage.getItem('poupa_pila_token');
       const savedUser = localStorage.getItem('poupa_pila_user');
+      const savedWorkspace = localStorage.getItem('poupa_pila_workspace') || 'personal';
       
       if (savedToken && savedUser) {
         try {
           const res = await fetch('/api/auth/me', {
             headers: {
-              'Authorization': `Bearer ${savedToken}`
+              'Authorization': `Bearer ${savedToken}`,
+              'X-Workspace-Owner': savedWorkspace
             }
           });
           
@@ -30,6 +34,7 @@ export function AuthProvider({ children }) {
             // Token expirado ou inválido
             localStorage.removeItem('poupa_pila_token');
             localStorage.removeItem('poupa_pila_user');
+            localStorage.removeItem('poupa_pila_workspace');
             setUser(null);
             setToken(null);
           }
@@ -48,6 +53,52 @@ export function AuthProvider({ children }) {
 
     validateToken();
   }, []);
+
+  // Carrega workspaces disponíveis sempre que o token mudar
+  useEffect(() => {
+    const loadWorkspaces = async () => {
+      if (!token) {
+        setAvailableWorkspaces([]);
+        return;
+      }
+      try {
+        const res = await fetch('/api/auth/workspaces', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          const wData = await res.json();
+          setAvailableWorkspaces(wData);
+        }
+      } catch (e) {
+        console.error('Erro ao carregar workspaces:', e);
+      }
+    };
+    loadWorkspaces();
+  }, [token]);
+
+  const switchWorkspace = async (workspaceId) => {
+    if (!token) return;
+    try {
+      localStorage.setItem('poupa_pila_workspace', workspaceId);
+      setActiveWorkspace(workspaceId);
+      
+      const res = await fetch('/api/auth/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-Workspace-Owner': workspaceId
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUser(data.user);
+        localStorage.setItem('poupa_pila_user', JSON.stringify(data.user));
+      }
+    } catch (e) {
+      console.error('Erro ao trocar de workspace:', e);
+    }
+  };
 
   const login = async (username, password, confirmRegister = false) => {
     setAuthError('');
@@ -74,9 +125,11 @@ export function AuthProvider({ children }) {
 
       localStorage.setItem('poupa_pila_token', data.token);
       localStorage.setItem('poupa_pila_user', JSON.stringify(data.user));
+      localStorage.setItem('poupa_pila_workspace', 'personal');
       
       setUser(data.user);
       setToken(data.token);
+      setActiveWorkspace('personal');
       return { success: true };
     } catch (e) {
       console.error('Erro ao efetuar login:', e);
@@ -101,12 +154,27 @@ export function AuthProvider({ children }) {
     }
     localStorage.removeItem('poupa_pila_token');
     localStorage.removeItem('poupa_pila_user');
+    localStorage.removeItem('poupa_pila_workspace');
     setUser(null);
     setToken(null);
+    setAvailableWorkspaces([]);
+    setActiveWorkspace('personal');
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isAuthenticated: !!user, loading, authError, login, logout, setAuthError }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      token, 
+      isAuthenticated: !!user, 
+      loading, 
+      authError, 
+      login, 
+      logout, 
+      setAuthError,
+      activeWorkspace,
+      availableWorkspaces,
+      switchWorkspace
+    }}>
       {children}
     </AuthContext.Provider>
   );

@@ -8,7 +8,7 @@ import { CustomSelect } from '../../components/ui/CustomSelect';
 import { 
   User, Shield, Database, Download, Upload, Trash2, 
   Check, AlertTriangle, Info, Moon, Sun, Globe, Palette, LayoutGrid,
-  Users, UserPlus, Eye, EyeOff, Lock
+  Users, UserPlus, Eye, EyeOff, Lock, X
 } from 'lucide-react';
 import './Settings.css';
 
@@ -36,7 +36,7 @@ const THEME_COLORS = [
 ];
 
 export function Settings() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { 
     accounts, transactions, loans, hideValues, toggleHideValues,
     categories, categoryLimits, addCategory, deleteCategory, updateCategory, addCategoryLimit, deleteCategoryLimit 
@@ -46,6 +46,104 @@ export function Settings() {
   const [profileName, setProfileName] = useState(user?.name || 'Administrador');
   const [profileEmail, setProfileEmail] = useState(user?.email || 'admin@poupapila.com');
   const [currency, setCurrency] = useState('BRL');
+
+  const [confirmInputVal, setConfirmInputVal] = useState('');
+
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info', // 'info', 'danger', 'success'
+    confirmText: 'Confirmar',
+    cancelText: 'Cancelar',
+    requiredInputText: '',
+    onConfirm: null,
+    onCancel: null
+  });
+
+  const showCustomConfirm = (title, message, confirmText, onConfirm, type = 'danger', requiredInputText = '') => {
+    setConfirmInputVal('');
+    setConfirmModal({
+      isOpen: true,
+      title,
+      message,
+      type,
+      confirmText,
+      cancelText: 'Cancelar',
+      requiredInputText,
+      onConfirm: () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        onConfirm();
+      },
+      onCancel: () => setConfirmModal(prev => ({ ...prev, isOpen: false }))
+    });
+  };
+
+  const showCustomAlert = (title, message, type = 'info', onOk = null) => {
+    setConfirmInputVal('');
+    setConfirmModal({
+      isOpen: true,
+      title,
+      message,
+      type,
+      confirmText: 'Ok',
+      cancelText: '',
+      requiredInputText: '',
+      onConfirm: () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        if (onOk) onOk();
+      },
+      onCancel: null
+    });
+  };
+
+
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newChangePassword, setNewChangePassword] = useState('');
+  const [confirmChangePassword, setConfirmChangePassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    if (newChangePassword.length < 4) {
+      setPasswordError('A nova senha deve ter pelo menos 4 caracteres.');
+      return;
+    }
+
+    if (newChangePassword !== confirmChangePassword) {
+      setPasswordError('As senhas digitadas não coincidem.');
+      return;
+    }
+
+    try {
+      const savedToken = localStorage.getItem('poupa_pila_token');
+      const res = await fetch('/api/settings/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${savedToken}`
+        },
+        body: JSON.stringify({ currentPassword, newPassword: newChangePassword })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setPasswordSuccess('Senha alterada com sucesso!');
+        setCurrentPassword('');
+        setNewChangePassword('');
+        setConfirmChangePassword('');
+      } else {
+        setPasswordError(data.error || 'Erro ao alterar senha.');
+      }
+    } catch (err) {
+      setPasswordError('Erro de conexão ao alterar senha.');
+    }
+  };
 
   // Para adicionar categoria
   const [newCatName, setNewCatName] = useState('');
@@ -180,6 +278,92 @@ export function Settings() {
     } catch (err) {
       setLimitError(err.message || 'Erro ao remover limite.');
     }
+  };
+  
+  const executeClearData = async () => {
+    try {
+      const savedToken = localStorage.getItem('poupa_pila_token');
+      const res = await fetch('/api/settings/clear-data', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${savedToken}`
+        }
+      });
+      
+      if (res.ok) {
+        showCustomAlert(
+          'Dados Limpos', 
+          'Dados limpos com sucesso! O sistema foi reiniciado com os valores padrão.',
+          'success',
+          () => window.location.reload()
+        );
+      } else {
+        const data = await res.json();
+        showCustomAlert('Erro', data.error || 'Erro ao limpar dados.', 'danger');
+      }
+    } catch (e) {
+      showCustomAlert('Erro', 'Erro de conexão ao limpar dados.', 'danger');
+    }
+  };
+
+  const handleClearData = () => {
+    showCustomConfirm(
+      'Limpar Todos os Lançamentos',
+      'ATENÇÃO: Isso apagará permanentemente todas as suas transações, contas e histórico, mas manterá seu usuário ativo. Esta ação NÃO pode ser desfeita.',
+      'Limpar Dados',
+      executeClearData,
+      'danger',
+      'limpar'
+    );
+  };
+
+  const executeDeleteAccount = async () => {
+    try {
+      const savedToken = localStorage.getItem('poupa_pila_token');
+      const res = await fetch('/api/settings/account', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${savedToken}`
+        }
+      });
+      
+      if (res.ok) {
+        showCustomAlert(
+          'Conta Excluída',
+          'Sua conta foi excluída definitivamente.',
+          'success',
+          async () => {
+            await logout();
+          }
+        );
+      } else {
+        const data = await res.json();
+        showCustomAlert('Erro', data.error || 'Erro ao excluir conta.', 'danger');
+      }
+    } catch (e) {
+      showCustomAlert('Erro', 'Erro de conexão ao excluir conta.', 'danger');
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    showCustomConfirm(
+      'Excluir Minha Conta',
+      'ATENÇÃO CRÍTICA: Isso apagará permanentemente sua conta, seu usuário e todos os seus lançamentos. Você perderá o acesso e precisará criar uma nova conta se quiser usar o sistema novamente.',
+      'Prosseguir',
+      () => {
+        setTimeout(() => {
+          showCustomConfirm(
+            'Confirmar Exclusão Definitiva',
+            'Deseja realmente prosseguir? Esta ação é irreversível. Para confirmar a exclusão definitiva de sua conta, digite seu nome de usuário.',
+            'Excluir Minha Conta Definitivamente',
+            executeDeleteAccount,
+            'danger',
+            user?.username || 'excluir'
+          );
+        }, 150);
+      },
+      'danger'
+    );
   };
   
 
@@ -355,18 +539,56 @@ export function Settings() {
       try {
         const parsed = JSON.parse(event.target.result);
         if (parsed.accounts && parsed.transactions) {
-          alert("Backup lido com sucesso! Para persistir os dados no banco de dados, envie os dados via API (Modo de Demonstração).");
+          parsed.loans = parsed.loans || [];
+
+          const executeImport = async () => {
+            try {
+              const savedToken = localStorage.getItem('poupa_pila_token');
+              const res = await fetch('/api/settings/import-data', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${savedToken}`
+                },
+                body: JSON.stringify(parsed)
+              });
+
+              if (res.ok) {
+                showCustomAlert(
+                  'Backup Importado',
+                  'Seus dados de backup foram importados e salvos com sucesso no banco de dados!',
+                  'success',
+                  () => window.location.reload()
+                );
+              } else {
+                const data = await res.json();
+                showCustomAlert('Erro', data.error || 'Erro ao importar dados.', 'danger');
+              }
+            } catch (err) {
+              showCustomAlert('Erro', 'Erro de conexão ao importar dados.', 'danger');
+            }
+          };
+
+          showCustomConfirm(
+            'Importar Backup',
+            'ATENÇÃO: Importar um backup substituirá completamente todos os seus dados atuais (contas, transações e empréstimos). Deseja realmente prosseguir?',
+            'Importar e Substituir',
+            executeImport,
+            'danger',
+            'confirmar'
+          );
         } else {
-          alert("Formato de backup inválido.");
+          showCustomAlert('Erro', 'Formato de backup inválido.', 'danger');
         }
       } catch (err) {
-        alert("Erro ao ler arquivo de backup.");
+        showCustomAlert('Erro', 'Erro ao ler arquivo de backup.', 'danger');
       }
     };
     fileReader.readAsText(file);
+    e.target.value = ''; // Reset input selection
   };
 
-  const DEFAULT_CAT_NAMES = ['Empréstimo', 'Recebimento de Empréstimo', 'Salário', 'Despesa', 'Receita'];
+  const DEFAULT_CAT_NAMES = ['Empréstimo', 'Recebimento de Empréstimo', 'Salário', 'Despesa', 'Receita', 'Transferência'];
 
   const renderCategoryItem = (cat) => {
     const isDefault = DEFAULT_CAT_NAMES.includes(cat.name);
@@ -681,20 +903,99 @@ export function Settings() {
               </div>
             </GlassCard>
 
-            <GlassCard className="settings-card danger-card">
+            <GlassCard className="settings-card">
+              <div className="card-header-icon">
+                <Lock size={20} className="text-emerald" />
+                <h3>Alterar Senha de Acesso</h3>
+              </div>
+
+              <form onSubmit={handleChangePassword} className="settings-form">
+                {passwordError && (
+                  <div className="access-banner access-banner--error" style={{ marginBottom: '10px' }}>
+                    <AlertTriangle size={16} />
+                    <span>{passwordError}</span>
+                  </div>
+                )}
+                {passwordSuccess && (
+                  <div className="access-banner access-banner--success" style={{ marginBottom: '10px' }}>
+                    <Check size={16} />
+                    <span>{passwordSuccess}</span>
+                  </div>
+                )}
+
+                <div className="form-group">
+                  <label htmlFor="current-password-input">Senha Atual</label>
+                  <input 
+                    id="current-password-input"
+                    type="password" 
+                    className="form-input" 
+                    value={currentPassword} 
+                    onChange={e => setCurrentPassword(e.target.value)} 
+                    placeholder="Digite sua senha atual"
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="new-password-input">Nova Senha</label>
+                  <input 
+                    id="new-password-input"
+                    type="password" 
+                    className="form-input" 
+                    value={newChangePassword} 
+                    onChange={e => setNewChangePassword(e.target.value)} 
+                    placeholder="Mínimo 4 caracteres"
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="confirm-password-input">Confirmar Nova Senha</label>
+                  <input 
+                    id="confirm-password-input"
+                    type="password" 
+                    className="form-input" 
+                    value={confirmChangePassword} 
+                    onChange={e => setConfirmChangePassword(e.target.value)} 
+                    placeholder="Repita a nova senha"
+                    required
+                  />
+                </div>
+
+                <div className="settings-actions">
+                  <Button type="submit" variant="primary" icon={<Check size={16} />}>
+                    Atualizar Senha
+                  </Button>
+                </div>
+              </form>
+            </GlassCard>
+
+            <GlassCard className="settings-card danger-card grid-colspan-2">
               <div className="card-header-icon">
                 <AlertTriangle size={20} className="text-coral" />
                 <h3 className="text-coral">Zona de Perigo</h3>
               </div>
               
-              <div className="system-danger-zone" style={{ borderTop: 'none', paddingTop: 0, marginTop: 0 }}>
-                <div className="danger-content">
-                  <h4>Excluir Todos os Lançamentos</h4>
-                  <p>Esta ação removerá permanentemente todos os registros do seu extrato financeiro local.</p>
+              <div className="system-danger-zone" style={{ borderTop: 'none', paddingTop: 0, marginTop: 0, display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
+                <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center', textAlign: 'left', gap: '16px' }}>
+                  <div className="danger-content" style={{ flex: 1 }}>
+                    <h4>Excluir Todos os Lançamentos</h4>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>Remove transações, contas e histórico, mantendo seu usuário ativo.</p>
+                  </div>
+                  <button type="button" className="danger-btn" onClick={handleClearData} style={{ flexShrink: 0 }}>
+                    <Trash2 size={16} /> Limpar Dados
+                  </button>
                 </div>
-                <button type="button" className="danger-btn">
-                  <Trash2 size={16} /> Limpar Banco de Dados
-                </button>
+
+                <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center', textAlign: 'left', borderTop: '1px solid rgba(244, 63, 94, 0.15)', paddingTop: '20px', gap: '16px' }}>
+                  <div className="danger-content" style={{ flex: 1 }}>
+                    <h4>Excluir Minha Conta</h4>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>Apaga permanentemente todos os lançamentos e deleta seu login e senha.</p>
+                  </div>
+                  <button type="button" className="danger-btn" onClick={handleDeleteAccount} style={{ flexShrink: 0 }}>
+                    <AlertTriangle size={16} /> Excluir Conta
+                  </button>
+                </div>
               </div>
             </GlassCard>
           </div>
@@ -936,7 +1237,7 @@ export function Settings() {
               <div className="categories-list-container">
                 <h4 className="section-subtitle">Categorias Ativas</h4>
                 {categories.length === 0 ? (
-                  <div className="categories-list-scroll mt-12" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                  <div className="categories-list-scroll mt-12">
                     <p className="text-muted" style={{ fontSize: '0.85rem' }}>Nenhuma categoria cadastrada.</p>
                   </div>
                 ) : (() => {
@@ -949,7 +1250,7 @@ export function Settings() {
                     .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
 
                   return (
-                    <div className="categories-list-scroll mt-12" style={{ maxHeight: '380px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', paddingRight: '4px' }}>
+                    <div className="categories-list-scroll mt-12">
                       {/* Categorias Personalizadas */}
                       <div>
                         <h5 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', letterSpacing: '0.05em', fontWeight: 700 }}>
@@ -1058,7 +1359,7 @@ export function Settings() {
 
               <div className="limits-list-container">
                 <h4 className="section-subtitle">Limites Configurados</h4>
-                <div className="limits-list-scroll mt-12" style={{ maxHeight: '480px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div className="limits-list-scroll mt-12">
                   {categoryLimits.length === 0 ? (
                     <p className="text-muted" style={{ fontSize: '0.85rem' }}>Nenhum limite configurado.</p>
                   ) : (
@@ -1161,6 +1462,85 @@ export function Settings() {
           </div>
         )}
       </div>
+      {/* Modal de Confirmação customizado */}
+      {confirmModal.isOpen && (
+        <div className="settings-modal-overlay" onClick={confirmModal.onCancel || (() => {})}>
+          <div 
+            className={`settings-modal ${confirmModal.type === 'danger' ? 'danger-modal' : ''}`} 
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="settings-modal-header">
+              <h3>
+                {confirmModal.type === 'danger' && <AlertTriangle size={18} className="text-coral" />}
+                {confirmModal.type === 'success' && <Check size={18} className="text-emerald" />}
+                {confirmModal.type === 'info' && <Info size={18} className="text-emerald" />}
+                <span>{confirmModal.title}</span>
+              </h3>
+              {confirmModal.onCancel && (
+                <button className="settings-modal-close" onClick={confirmModal.onCancel}>
+                  <X size={18} />
+                </button>
+              )}
+            </div>
+            
+            <div className="settings-modal-body">
+              <p>{confirmModal.message}</p>
+              {confirmModal.requiredInputText && (
+                <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.78rem', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Digite <strong style={{ color: 'var(--accent-coral, #f43f5e)', textTransform: 'none' }}>{confirmModal.requiredInputText}</strong> para habilitar a confirmação:
+                  </label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    style={{
+                      borderColor: confirmInputVal.toLowerCase() === confirmModal.requiredInputText.toLowerCase()
+                        ? 'var(--accent-emerald)'
+                        : 'rgba(244, 63, 94, 0.4)',
+                      background: 'rgba(0, 0, 0, 0.2)',
+                      padding: '10px 14px',
+                      borderRadius: '8px',
+                      color: 'var(--text-primary)',
+                      outline: 'none',
+                      transition: 'all 0.2s ease',
+                      marginTop: '4px'
+                    }}
+                    value={confirmInputVal}
+                    onChange={e => setConfirmInputVal(e.target.value)}
+                    placeholder={confirmModal.requiredInputText}
+                    autoFocus
+                  />
+                </div>
+              )}
+            </div>
+            
+            <div className="settings-modal-footer">
+              {confirmModal.onCancel && (
+                <button className="settings-modal-btn-cancel" onClick={confirmModal.onCancel}>
+                  {confirmModal.cancelText || 'Cancelar'}
+                </button>
+              )}
+              {(() => {
+                const isConfirmDisabled = confirmModal.requiredInputText && 
+                  confirmInputVal.trim().toLowerCase() !== confirmModal.requiredInputText.toLowerCase();
+                return (
+                  <button 
+                    className={confirmModal.type === 'danger' ? 'settings-modal-btn-danger' : 'settings-modal-btn-confirm'}
+                    onClick={confirmModal.onConfirm}
+                    disabled={isConfirmDisabled}
+                    style={{
+                      opacity: isConfirmDisabled ? 0.35 : 1,
+                      cursor: isConfirmDisabled ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {confirmModal.confirmText}
+                  </button>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

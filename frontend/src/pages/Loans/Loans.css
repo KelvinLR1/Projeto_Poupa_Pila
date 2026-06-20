@@ -341,7 +341,7 @@
 
 @media (max-width: 768px) {
   .loan-page-actions {
-    flex-direction: column;
+    flex-direction: column-reverse;
     align-items: stretch;
     gap: 12px;
     width: 100%;
@@ -350,6 +350,10 @@
   .loan-page-actions .toggle-switch {
     justify-content: space-between;
     width: 100%;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    padding: 10px 16px;
+    border-radius: var(--radius-md);
   }
 
   .loan-page-actions button,

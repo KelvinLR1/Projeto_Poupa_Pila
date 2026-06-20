@@ -4,7 +4,7 @@ import { useAuth } from './AuthContext';
 const FinanceContext = createContext();
 
 export function FinanceProvider({ children }) {
-  const { token, isAuthenticated } = useAuth();
+  const { token, isAuthenticated, activeWorkspace } = useAuth();
   
   const [accounts, setAccounts] = useState([]);
   const [transactions, setTransactions] = useState([]);
@@ -42,7 +42,7 @@ export function FinanceProvider({ children }) {
     }
   };
 
-  // Carrega os dados sempre que o token for ativado/alterado
+  // Carrega os dados sempre que o token ou o workspace ativo mudar
   useEffect(() => {
     if (isAuthenticated && token) {
       fetchFinanceData();
@@ -54,7 +54,7 @@ export function FinanceProvider({ children }) {
       setCategories([]);
       setCategoryLimits([]);
     }
-  }, [isAuthenticated, token]);
+  }, [isAuthenticated, token, activeWorkspace]);
 
   const addAccount = async (newAccount) => {
     const id = generateId();

@@ -7,6 +7,7 @@ import {
   MoreHorizontal, BarChart2
 } from 'lucide-react';
 import './Layout.css';
+import { CustomSelect } from '../ui/CustomSelect';
 
 // Primary nav items shown in the bottom bar (max 4) + "More" for the rest
 const ALL_NAV_ITEMS = [
@@ -25,7 +26,7 @@ const BOTTOM_PRIMARY = ['dashboard', 'transactions', 'cashflow', 'loans'];
 
 export function Layout({ children, activeTab, setActiveTab }) {
   const { hideValues, toggleHideValues } = useFinance();
-  const { user, logout } = useAuth();
+  const { user, logout, activeWorkspace, availableWorkspaces, switchWorkspace } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Close sidebar on tab change (mobile)
@@ -143,6 +144,19 @@ export function Layout({ children, activeTab, setActiveTab }) {
           </div>
 
           <div className="topbar-actions">
+            {availableWorkspaces && availableWorkspaces.length > 1 && (
+              <CustomSelect
+                className="workspace-switcher-select"
+                value={activeWorkspace}
+                onChange={(e) => switchWorkspace(e.target.value)}
+                options={availableWorkspaces.map(w => ({
+                  value: w.id,
+                  label: w.isLinked 
+                    ? `Conta de ${w.name.replace('Conta de ', '')} (${w.permissions === 'read_only' ? 'Leitura' : 'Total'})` 
+                    : `${w.name} (Pessoal)`
+                }))}
+              />
+            )}
             <button
               className="action-btn glass"
               onClick={toggleHideValues}
