@@ -40,10 +40,11 @@ export function Transactions({ filterAccountId, setFilterAccountId, filterTab = 
   const [startDate, setStartDate] = useState(initialDates.start);
   const [endDate, setEndDate] = useState(initialDates.end);
   const [ignoreDate, setIgnoreDate] = useState(false);
+  const [dateFilterType, setDateFilterType] = useState('date'); // 'date' ou 'competence_date'
 
   useEffect(() => {
     setVisibleCount(20);
-  }, [searchTerm, filterAccountId, filterTab, startDate, endDate, filterCategory, ignoreDate]);
+  }, [searchTerm, filterAccountId, filterTab, startDate, endDate, filterCategory, ignoreDate, dateFilterType]);
 
   const allRef = useRef(null);
   const payableRef = useRef(null);
@@ -105,7 +106,8 @@ export function Transactions({ filterAccountId, setFilterAccountId, filterTab = 
       const matchesSearch = tx.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
                             tx.category.toLowerCase().includes(searchTerm.toLowerCase());
                             
-      const matchesDate = ignoreDate || ((!startDate || tx.date >= startDate) && (!endDate || tx.date <= endDate));
+      const targetDate = dateFilterType === 'competence_date' ? (tx.competence_date || tx.date) : tx.date;
+      const matchesDate = ignoreDate || ((!startDate || targetDate >= startDate) && (!endDate || targetDate <= endDate));
                             
       return matchesTab && matchesAccount && matchesCategory && matchesSearch && matchesDate;
     })
@@ -202,6 +204,15 @@ export function Transactions({ filterAccountId, setFilterAccountId, filterTab = 
               </div>
 
               <div className={`date-filter-inputs-wrapper ${ignoreDate ? 'collapsed' : ''}`}>
+                <CustomSelect
+                  value={dateFilterType}
+                  onChange={e => setDateFilterType(e.target.value)}
+                  options={[
+                    { value: 'date', label: 'Vencimento' },
+                    { value: 'competence_date', label: 'Compra' }
+                  ]}
+                  className="date-type-filter-select"
+                />
                 <CustomDatePicker
                   value={startDate}
                   onChange={e => setStartDate(e.target.value)}

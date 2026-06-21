@@ -155,10 +155,16 @@ export function TransactionDetailsModal({ transaction, onCancel, onPayRemaining,
                 {transaction.is_forecast === 1 && (
                   <Badge variant="purple">Previsão</Badge>
                 )}
-                <span className="tx-date-chip">
+                <span className="tx-date-chip" title="Data de Vencimento">
                   <Calendar size={12} />
-                  {formatDate(transaction.date)}
+                  Venc: {formatDate(transaction.date)}
                 </span>
+                {transaction.competence_date && transaction.competence_date !== transaction.date && (
+                  <span className="tx-date-chip" title="Data da Compra" style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                    <Calendar size={12} />
+                    Compra: {formatDate(transaction.competence_date)}
+                  </span>
+                )}
               </div>
             </div>
           </div>

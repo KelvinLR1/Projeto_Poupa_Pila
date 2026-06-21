@@ -28,6 +28,7 @@ export function TransactionFormDrawer({ onClose }) {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [competenceDate, setCompetenceDate] = useState(new Date().toISOString().split('T')[0]);
   const [accountId, setAccountId] = useState(accounts[0]?.id || '');
   const [status, setStatus] = useState('pending');
   const [isForecast, setIsForecast] = useState(false);
@@ -183,6 +184,7 @@ export function TransactionFormDrawer({ onClose }) {
       description,
       category,
       date,
+      competence_date: competenceDate,
       accountId,
       status: isForecast ? 'pending' : status,
       is_forecast: isForecast ? 1 : 0,
@@ -550,12 +552,22 @@ export function TransactionFormDrawer({ onClose }) {
 
               <div className="form-row mt-16">
                 <div className="form-group flex-1">
-                  <label>Data</label>
+                  <label>Data da Compra</label>
+                  <CustomDatePicker
+                    value={competenceDate}
+                    onChange={(e) => setCompetenceDate(e.target.value)}
+                  />
+                </div>
+                <div className="form-group flex-1">
+                  <label>{isInstallment ? '1º Vencimento' : 'Vencimento'}</label>
                   <CustomDatePicker
                     value={date}
                     onChange={(e) => handleDateChange(e.target.value)}
                   />
                 </div>
+              </div>
+
+              <div className="form-row mt-16">
                 <div className="form-group flex-1">
                   <label>Conta Vinculada</label>
                   <CustomSelect

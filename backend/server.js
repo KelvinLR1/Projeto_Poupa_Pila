@@ -444,8 +444,8 @@ app.post('/api/settings/import-data', authenticate, (req, res) => {
 
     // 5. Inserir transações e seus settlements
     const insertTx = db.prepare(`
-      INSERT INTO transactions (id, user_id, accountId, type, amount, category, description, date, status, is_forecast, transfer_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO transactions (id, user_id, accountId, type, amount, category, description, date, competence_date, status, is_forecast, transfer_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     const insertSettlement = db.prepare(`
       INSERT INTO settlements (id, transaction_id, date, amount, accountId)
@@ -462,6 +462,7 @@ app.post('/api/settings/import-data', authenticate, (req, res) => {
         tx.category,
         tx.description || '',
         tx.date,
+        tx.competence_date || tx.date,
         tx.status,
         tx.is_forecast ? 1 : 0,
         tx.transfer_id || null
@@ -665,7 +666,7 @@ function addMonths(dateStr, months) {
 }
 
 app.post('/api/finance/transactions', authenticate, (req, res) => {
-  const { id, accountId, type, amount, category, description, date, status, is_forecast, isInstallment, installments } = req.body;
+  const { id, accountId, type, amount, category, description, date, competence_date, status, is_forecast, isInstallment, installments } = req.body;
   if (!id || !accountId || !type || !amount || !category || !date || !status) {
     return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
   }
@@ -689,8 +690,8 @@ app.post('/api/finance/transactions', authenticate, (req, res) => {
     }
 
     const insertTx = db.prepare(`
-      INSERT INTO transactions (id, user_id, accountId, type, amount, category, description, date, status, is_forecast)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO transactions (id, user_id, accountId, type, amount, category, description, date, competence_date, status, is_forecast)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     let settlements = [];
@@ -719,6 +720,7 @@ app.post('/api/finance/transactions', authenticate, (req, res) => {
           category,
           installmentDesc,
           installmentDate,
+          competence_date || date,
           installmentStatus,
           is_forecast ? 1 : 0
         );
@@ -739,7 +741,7 @@ app.post('/api/finance/transactions', authenticate, (req, res) => {
         }
       }
     } else {
-      insertTx.run(id, req.user.id, accountId, type, parseFloat(amount), category, description || '', date, status, is_forecast ? 1 : 0);
+      insertTx.run(id, req.user.id, accountId, type, parseFloat(amount), category, description || '', date, competence_date || date, status, is_forecast ? 1 : 0);
 
       if (status === 'paid') {
         const settlementId = Math.random().toString(36).substr(2, 9);
