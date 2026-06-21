@@ -128,7 +128,7 @@ export function FinanceProvider({ children }) {
     }
   };
 
-  const markTransactionAsPaid = async (transactionId, paidAmount = null, actualAmount = null, asLoan = false, loanId = null, loanCounterpart = null, loanDueDate = null, loanTitle = null) => {
+  const markTransactionAsPaid = async (transactionId, paidAmount = null, actualAmount = null, asLoan = false, loanId = null, loanCounterpart = null, loanDueDate = null, loanTitle = null, interest = null, discount = null) => {
     try {
       const res = await fetch(`/api/finance/transactions/${transactionId}/pay`, {
         method: 'POST',
@@ -136,7 +136,7 @@ export function FinanceProvider({ children }) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ paidAmount, actualAmount, asLoan, loanId, loanCounterpart, loanDueDate, loanTitle })
+        body: JSON.stringify({ paidAmount, actualAmount, interest, discount, asLoan, loanId, loanCounterpart, loanDueDate, loanTitle })
       });
       if (res.ok) {
         await fetchFinanceData();
@@ -165,7 +165,7 @@ export function FinanceProvider({ children }) {
     }
   };
 
-  const payLoan = async (loanId, amount, date, description, accountId, category) => {
+  const payLoan = async (loanId, amount, date, description, accountId, category, createTransaction = true) => {
     try {
       const res = await fetch(`/api/finance/loans/${loanId}/pay`, {
         method: 'POST',
@@ -173,7 +173,7 @@ export function FinanceProvider({ children }) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ amount, date, description, accountId, category })
+        body: JSON.stringify({ amount, date, description, accountId, category, createTransaction })
       });
       if (res.ok) {
         await fetchFinanceData();
@@ -233,6 +233,25 @@ export function FinanceProvider({ children }) {
       }
     } catch (e) {
       console.error('Erro ao excluir quitação:', e);
+    }
+    return null;
+  };
+
+  const deleteTransaction = async (transactionId) => {
+    try {
+      const res = await fetch(`/api/finance/transactions/${transactionId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        await fetchFinanceData();
+        return data;
+      }
+    } catch (e) {
+      console.error('Erro ao excluir transação:', e);
     }
     return null;
   };
@@ -381,6 +400,7 @@ export function FinanceProvider({ children }) {
       updateAccount,
       toggleAccountStatus,
       addTransaction,
+      deleteTransaction,
       addLoan,
       payLoan,
       toggleLoanType,

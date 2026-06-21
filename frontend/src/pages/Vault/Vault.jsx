@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useVault } from '../../context/VaultContext';
+import { useConfirm } from '../../context/ConfirmContext';
 import { GlassCard } from '../../components/ui/GlassCard';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
@@ -22,6 +23,7 @@ function copyToClipboard(text, setCopied, key) {
 
 export function Vault() {
   const { vault, deleteEntry, deleteGroup, deleteSubgroup } = useVault();
+  const { confirm } = useConfirm();
 
   const [search, setSearch] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState(null);
@@ -180,7 +182,12 @@ export function Vault() {
                       <button
                         className="vault-tree-action-btn danger"
                         title="Excluir grupo"
-                        onClick={(e) => { e.stopPropagation(); if (window.confirm(`Excluir grupo "${group.name}" e todas as suas credenciais?`)) deleteGroup(group.id); }}
+                        onClick={async (e) => { 
+                          e.stopPropagation(); 
+                          if (await confirm({ title: 'Excluir Grupo', message: `Tem certeza que deseja excluir o grupo "${group.name}" e todas as suas credenciais?` })) {
+                            deleteGroup(group.id); 
+                          }
+                        }}
                       >
                         <Trash2 size={12} />
                       </button>
@@ -204,7 +211,12 @@ export function Vault() {
                           <button
                             className="vault-tree-action-btn danger"
                             title="Excluir subgrupo"
-                            onClick={(e) => { e.stopPropagation(); if (window.confirm(`Excluir subgrupo "${sg.name}"?`)) deleteSubgroup(group.id, sg.id); }}
+                            onClick={async (e) => { 
+                              e.stopPropagation(); 
+                              if (await confirm({ title: 'Excluir Subgrupo', message: `Tem certeza que deseja excluir o subgrupo "${sg.name}"?` })) {
+                                deleteSubgroup(group.id, sg.id); 
+                              }
+                            }}
                           >
                             <Trash2 size={12} />
                           </button>
@@ -260,7 +272,11 @@ export function Vault() {
                         <button className="vault-icon-btn" title="Editar" onClick={() => setEntryModal({ mode: 'edit', groupId: entry._groupId, subgroupId: entry._subgroupId || null, entry })}>
                           <Pencil size={15} />
                         </button>
-                        <button className="vault-icon-btn danger" title="Excluir" onClick={() => { if (window.confirm(`Excluir "${entry.name}"?`)) deleteEntry(entry._groupId, entry._subgroupId || null, entry.id); }}>
+                        <button className="vault-icon-btn danger" title="Excluir" onClick={async () => { 
+                          if (await confirm({ title: 'Excluir Credencial', message: `Tem certeza que deseja excluir a credencial "${entry.name}"?` })) {
+                            deleteEntry(entry._groupId, entry._subgroupId || null, entry.id); 
+                          }
+                        }}>
                           <Trash2 size={15} />
                         </button>
                       </div>

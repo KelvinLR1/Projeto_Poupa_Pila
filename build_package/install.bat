@@ -1,6 +1,6 @@
 @echo off
 setlocal enabledelayedexpansion
-
+cd /d "%~dp0"
 :: Verificar privilegios de administrador
 net session >nul 2>&1
 if %errorLevel% neq 0 (
@@ -43,14 +43,11 @@ echo [4/6] Copiando binarios principais...
 copy /y "node.exe" "%INSTALL_DIR%\" >nul
 copy /y "PoupaPilaService.exe" "%INSTALL_DIR%\" >nul
 copy /y "uninstall.bat" "%INSTALL_DIR%\" >nul
-copy /y "app.zip" "%INSTALL_DIR%\" >nul
 
-:: Extrair zip do aplicativo contendo backend e frontend/dist
-echo [5/6] Extraindo arquivos do sistema (pode demorar alguns segundos)...
-powershell -Command "Expand-Archive -Path '%INSTALL_DIR%\app.zip' -DestinationPath '%INSTALL_DIR%' -Force"
-
-:: Limpar zip extraido
-del /f /q "%INSTALL_DIR%\app.zip" >nul 2>&1
+:: Copiar pastas de codigo
+echo [5/6] Copiando arquivos do sistema (frontend e backend)...
+xcopy /E /I /Y "frontend" "%INSTALL_DIR%\frontend" >nul
+xcopy /E /I /Y "backend" "%INSTALL_DIR%\backend" >nul
 
 :: Criar o arquivo .env padrao caso nao exista
 if not exist "%INSTALL_DIR%\backend\.env" (

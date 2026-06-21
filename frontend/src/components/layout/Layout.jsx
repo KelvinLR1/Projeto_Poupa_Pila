@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
   Eye, EyeOff, LayoutDashboard, Receipt, HandCoins, Wallet,
   FileInput, LogOut, KeyRound, TrendingUp, Settings, Menu, X,
-  MoreHorizontal, BarChart2
+  MoreHorizontal, BarChart2, Check
 } from 'lucide-react';
 import './Layout.css';
 import { CustomSelect } from '../ui/CustomSelect';
@@ -28,6 +28,7 @@ export function Layout({ children, activeTab, setActiveTab }) {
   const { hideValues, toggleHideValues } = useFinance();
   const { user, logout, activeWorkspace, availableWorkspaces, switchWorkspace } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
   // Close sidebar on tab change (mobile)
   const handleTabChange = (id) => {
@@ -144,19 +145,6 @@ export function Layout({ children, activeTab, setActiveTab }) {
           </div>
 
           <div className="topbar-actions">
-            {availableWorkspaces && availableWorkspaces.length > 1 && (
-              <CustomSelect
-                className="workspace-switcher-select"
-                value={activeWorkspace}
-                onChange={(e) => switchWorkspace(e.target.value)}
-                options={availableWorkspaces.map(w => ({
-                  value: w.id,
-                  label: w.isLinked 
-                    ? `Conta de ${w.name.replace('Conta de ', '')} (${w.permissions === 'read_only' ? 'Leitura' : 'Total'})` 
-                    : `${w.name} (Pessoal)`
-                }))}
-              />
-            )}
             <button
               className="action-btn glass"
               onClick={toggleHideValues}
@@ -164,15 +152,69 @@ export function Layout({ children, activeTab, setActiveTab }) {
             >
               {hideValues ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
-            <button
-              className={`action-btn glass ${activeTab === 'settings' ? 'active-topbar' : ''}`}
-              onClick={() => handleTabChange('settings')}
-              title="Configurações"
-            >
-              <Settings size={20} />
-            </button>
-            <div className="avatar-placeholder glass">
-              {user ? user.name.charAt(0).toUpperCase() : 'J'}
+            
+            <div className="profile-menu-container">
+              <button 
+                className={`avatar-placeholder glass ${isProfileMenuOpen ? 'active' : ''}`}
+                onClick={() => setIsProfileMenuOpen(v => !v)}
+              >
+                {user ? user.name.charAt(0).toUpperCase() : 'J'}
+              </button>
+
+              {isProfileMenuOpen && (
+                <>
+                  <div className="profile-menu-overlay" onClick={() => setIsProfileMenuOpen(false)}></div>
+                  <div className="profile-dropdown animate-fade-in">
+                    <div className="profile-dropdown-header">
+                      <div className="profile-avatar-large">
+                        {user ? user.name.charAt(0).toUpperCase() : 'J'}
+                      </div>
+                      <div className="profile-info">
+                        <strong>{user ? user.name : 'Usuário'}</strong>
+                        <span>{user?.email || 'email@exemplo.com'}</span>
+                      </div>
+                    </div>
+
+                    <div className="profile-dropdown-section">
+                      <span className="section-label">Contas & Acesso</span>
+                      {availableWorkspaces && availableWorkspaces.length > 0 ? (
+                        availableWorkspaces.map(w => {
+                           const isMe = w.id === activeWorkspace;
+                           return (
+                             <button 
+                               key={w.id}
+                               className={`workspace-item ${isMe ? 'active' : ''}`}
+                               onClick={() => { switchWorkspace(w.id); setIsProfileMenuOpen(false); }}
+                             >
+                               <div className="workspace-item-info">
+                                 <span>{w.isLinked ? `Conta de ${w.name.replace('Conta de ', '')}` : 'Minha Conta Pessoal'}</span>
+                                 {w.permissions === 'read_only' && <small>Apenas Leitura</small>}
+                               </div>
+                               {isMe && <Check size={16} className="text-emerald" />}
+                             </button>
+                           );
+                        })
+                      ) : (
+                        <button className="workspace-item active">
+                          <div className="workspace-item-info">
+                            <span>Minha Conta Pessoal</span>
+                          </div>
+                          <Check size={16} className="text-emerald" />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="profile-dropdown-footer">
+                      <button className="dropdown-action-btn" onClick={() => { handleTabChange('settings'); setIsProfileMenuOpen(false); }}>
+                        <Settings size={16} /> Configurações
+                      </button>
+                      <button className="dropdown-action-btn logout-action" onClick={logout}>
+                        <LogOut size={16} /> Sair do Sistema
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </header>

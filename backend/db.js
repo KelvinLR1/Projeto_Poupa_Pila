@@ -80,6 +80,18 @@ db.exec(`
   );
 `);
 
+try {
+  db.exec('ALTER TABLE settlements ADD COLUMN interest REAL DEFAULT 0');
+} catch (e) {
+  // Column already exists
+}
+
+try {
+  db.exec('ALTER TABLE settlements ADD COLUMN discount REAL DEFAULT 0');
+} catch (e) {
+  // Column already exists
+}
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS loans (
     id TEXT PRIMARY KEY,

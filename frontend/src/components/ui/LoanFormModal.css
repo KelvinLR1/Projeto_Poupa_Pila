@@ -77,10 +77,29 @@
 .loan-form-modal-container {
   max-width: 600px !important;
   overflow: visible !important;
+  max-height: none !important;
+  margin-bottom: 40px !important;
 }
 
 .loan-form-modal-body {
   overflow: visible !important;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+}
+
+.loan-section {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+}
+
+.mt-12 {
+  margin-top: 12px;
 }
 
 @media (max-width: 768px) {

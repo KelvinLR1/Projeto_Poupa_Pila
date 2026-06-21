@@ -14,6 +14,11 @@ const TYPE_LABELS = {
   wallet: 'Carteira Física'
 };
 
+const PRESET_COLORS = [
+  '#10b981', '#f43f5e', '#3b82f6', '#8b5cf6',
+  '#f59e0b', '#0ea5e9', '#ec4899', '#64748b'
+];
+
 export function AccountEditModal({ account, onClose }) {
   const { updateAccount } = useFinance();
 
@@ -88,14 +93,27 @@ export function AccountEditModal({ account, onClose }) {
 
             <div className="form-group acc-color-group">
               <label>Cor Identificadora</label>
-              <div className="color-input-row">
-                <input
-                  type="color"
-                  className="color-picker-input"
-                  value={color}
-                  onChange={e => setColor(e.target.value)}
-                />
-                <span className="color-hex">{color.toUpperCase()}</span>
+              <div className="color-palette-row">
+                {PRESET_COLORS.map(c => (
+                  <button 
+                    key={c}
+                    type="button"
+                    className={`color-swatch-btn ${color === c ? 'active' : ''}`}
+                    style={{ backgroundColor: c }}
+                    onClick={() => setColor(c)}
+                  />
+                ))}
+                <div className="custom-color-wrapper" title="Cor Personalizada">
+                  <input 
+                    type="color" 
+                    value={color}
+                    onChange={e => setColor(e.target.value)}
+                    className="custom-color-input-hidden"
+                  />
+                  <button type="button" className="custom-color-btn" style={{ backgroundColor: PRESET_COLORS.includes(color) ? 'transparent' : color, borderStyle: PRESET_COLORS.includes(color) ? 'dashed' : 'solid', borderColor: PRESET_COLORS.includes(color) ? 'rgba(255,255,255,0.4)' : '#fff' }}>
+                    {PRESET_COLORS.includes(color) ? '+' : ''}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

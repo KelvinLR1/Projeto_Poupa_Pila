@@ -82,13 +82,13 @@
   gap: 16px;
 }
 
-.section-title {
+.drawer-section-title {
   margin: 0 0 4px;
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #a78bfa;
+  color: var(--accent-emerald);
   border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
   padding-bottom: 6px;
 }
@@ -231,9 +231,9 @@
 }
 
 .checkbox-label input[type="checkbox"]:checked + .checkbox-custom {
-  background: var(--accent-purple, #8b5cf6);
-  border-color: var(--accent-purple, #8b5cf6);
-  box-shadow: 0 0 10px rgba(139, 92, 246, 0.4);
+  background: var(--accent-emerald);
+  border-color: var(--accent-emerald);
+  box-shadow: 0 0 12px var(--accent-emerald-glow);
 }
 
 .checkbox-label input[type="checkbox"]:checked + .checkbox-custom::after {

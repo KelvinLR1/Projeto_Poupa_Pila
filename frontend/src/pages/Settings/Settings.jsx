@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
+import { useConfirm } from '../../context/ConfirmContext';
 import { formatCurrency } from '../../utils/formatters';
 import { GlassCard } from '../../components/ui/GlassCard';
 import { Button } from '../../components/ui/Button';
@@ -37,6 +38,7 @@ const THEME_COLORS = [
 
 export function Settings() {
   const { user, logout } = useAuth();
+  const { confirm: globalConfirm } = useConfirm();
   const { 
     accounts, transactions, loans, hideValues, toggleHideValues,
     categories, categoryLimits, addCategory, deleteCategory, updateCategory, addCategoryLimit, deleteCategoryLimit 
@@ -228,7 +230,7 @@ export function Settings() {
   };
 
   const handleDeleteCategory = async (id) => {
-    if (!confirm('Tem certeza que deseja remover esta categoria?')) return;
+    if (!(await globalConfirm({ title: 'Remover Categoria', message: 'Tem certeza que deseja remover esta categoria?' }))) return;
     setCatError('');
     setCatSuccess('');
     try {
@@ -269,7 +271,7 @@ export function Settings() {
   };
 
   const handleDeleteLimit = async (id) => {
-    if (!confirm('Tem certeza que deseja remover este limite?')) return;
+    if (!(await globalConfirm({ title: 'Remover Limite', message: 'Tem certeza que deseja remover este limite?' }))) return;
     setLimitError('');
     setLimitSuccess('');
     try {
@@ -492,7 +494,7 @@ export function Settings() {
   };
 
   const handleRevokeAccess = async (id, targetUser) => {
-    if (!confirm(`Deseja realmente revogar o acesso de "${targetUser}"?`)) return;
+    if (!(await globalConfirm({ title: 'Revogar Acesso', message: `Deseja realmente revogar o acesso de "${targetUser}"?` }))) return;
 
     setAccessError('');
     setAccessSuccess('');
@@ -610,15 +612,16 @@ export function Settings() {
         {/* Col 3: Regra e Ações */}
         <div className="cat-item-col-actions">
           {cat.type === 'expense' && (
-            <select
+            <CustomSelect
               value={cat.rule_type || 'want'}
               onChange={(e) => handleUpdateCategoryRuleType(cat.id, e.target.value)}
+              options={[
+                { value: 'necessity', label: 'Necessidade (50%)' },
+                { value: 'want', label: 'Desejo/Lazer (30%)' },
+                { value: 'investment', label: 'Investimento (20%)' }
+              ]}
               className="cat-item-rule-select"
-            >
-              <option value="necessity">Necessidade (50%)</option>
-              <option value="want">Desejo/Lazer (30%)</option>
-              <option value="investment">Investimento (20%)</option>
-            </select>
+            />
           )}
 
           <div className="cat-item-action-wrapper">

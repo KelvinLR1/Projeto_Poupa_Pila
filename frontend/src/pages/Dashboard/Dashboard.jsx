@@ -6,7 +6,7 @@ import { Badge } from '../../components/ui/Badge';
 import { ArrowUpRight, ArrowDownRight, Wallet, Activity, AlertTriangle, CheckCircle } from 'lucide-react';
 import './Dashboard.css';
 
-export function Dashboard({ setActiveTab, setFilterAccountId }) {
+export function Dashboard({ setActiveTab, setFilterAccountId, setTransactionsFilterTab }) {
   const { accounts, transactions, totalBalance, hideValues, categoryLimits } = useFinance();
   const [activeAlertIndex, setActiveAlertIndex] = React.useState(0);
   const [userInteracted, setUserInteracted] = React.useState(false);
@@ -219,7 +219,13 @@ export function Dashboard({ setActiveTab, setFilterAccountId }) {
 
       {/* Alertas de Contas a Pagar/Receber */}
       <section className="alerts-section">
-        <GlassCard className="alert-card alert-payable">
+        <GlassCard 
+          className="alert-card alert-payable clickable"
+          onClick={() => {
+            if (setTransactionsFilterTab) setTransactionsFilterTab('payable');
+            setActiveTab('transactions');
+          }}
+        >
           <div className="alert-icon-wrapper">
             <ArrowDownRight size={20} className="text-coral" />
           </div>
@@ -229,7 +235,13 @@ export function Dashboard({ setActiveTab, setFilterAccountId }) {
           </div>
         </GlassCard>
         
-        <GlassCard className="alert-card alert-receivable">
+        <GlassCard 
+          className="alert-card alert-receivable clickable"
+          onClick={() => {
+            if (setTransactionsFilterTab) setTransactionsFilterTab('receivable');
+            setActiveTab('transactions');
+          }}
+        >
           <div className="alert-icon-wrapper">
             <ArrowUpRight size={20} className="text-emerald" />
           </div>

@@ -37,11 +37,20 @@ if exist "%SHORTCUT_PATH%" del /f /q "%SHORTCUT_PATH%"
 echo Removendo registros do Windows...
 reg delete HKLM\Software\Microsoft\Windows\CurrentVersion\Uninstall\PoupaPila /f >nul 2>&1
 
-echo Removendo arquivos de C:\PoupaPila...
-:: Como o batch esta sendo executado a partir de C:\PoupaPila, 
-:: agendamos a exclusao da pasta em background apos a finalizacao deste script.
-timeout /t 1 >nul
-start /b "" cmd /c "rd /s /q C:\PoupaPila"
+set "INSTALL_DIR=%~dp0"
+if "%INSTALL_DIR:~-1%"=="\" set "INSTALL_DIR=%INSTALL_DIR:~0,-1%"
+
+echo Removendo arquivos de %INSTALL_DIR%...
+
+:: Criamos um script VBS temporario para deletar a pasta silenciosamente apos o bat fechar
+set "TEMP_VBS=%TEMP%\remove_poupapila.vbs"
+(
+echo WScript.Sleep 2000
+echo Set objShell = CreateObject^("WScript.Shell"^)
+echo objShell.Run "cmd /c rd /s /q """ ^& "%INSTALL_DIR%" ^& """", 0, True
+echo Set objFSO = CreateObject^("Scripting.FileSystemObject"^)
+echo objFSO.DeleteFile WScript.ScriptFullName
+) > "%TEMP_VBS%"
 
 echo.
 echo =========================================================
@@ -49,4 +58,5 @@ echo  Desinstalacao concluida com sucesso!
 echo =========================================================
 echo.
 timeout /t 2 >nul
+start "" /b wscript.exe "%TEMP_VBS%"
 exit /b 0

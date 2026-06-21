@@ -15,29 +15,37 @@ export function PaymentModal({ transaction, onConfirm, onCancel, loans = [] }) {
   useLayoutEffect(() => {
     if (containerRef.current) {
       const element = containerRef.current;
-      const prevHeightStyle = element.style.height;
+      const currentAnimatedHeight = element.offsetHeight;
+      
+      const prevTransition = element.style.transition;
+      element.style.transition = 'none';
       element.style.height = '';
       const newHeight = element.offsetHeight;
       
       if (lastHeightRef.current !== null && lastHeightRef.current !== newHeight) {
-        const oldHeight = lastHeightRef.current;
-        
-        element.style.transition = 'none';
-        element.style.height = `${oldHeight}px`;
+        element.style.height = `${currentAnimatedHeight}px`;
         element.offsetHeight; // force reflow
         
-        element.style.transition = 'height 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+        element.style.transition = 'height 300ms cubic-bezier(0.16, 1, 0.3, 1)';
         element.style.height = `${newHeight}px`;
         
         const timer = setTimeout(() => {
-          element.style.height = '';
-          element.style.transition = '';
-        }, 300);
+          // Verify if we are still at the target height before resetting
+          // This prevents resetting if another animation started
+          if (element.style.height === `${newHeight}px`) {
+            element.style.height = '';
+            element.style.transition = '';
+          }
+        }, 320);
         
         lastHeightRef.current = newHeight;
         return () => clearTimeout(timer);
       } else {
-        element.style.height = prevHeightStyle;
+        element.style.transition = prevTransition;
+        // Don't restore height if we are not animating, let it be auto
+        if (element.style.height !== '') {
+           element.style.height = '';
+        }
         lastHeightRef.current = newHeight;
       }
     }
@@ -58,8 +66,15 @@ export function PaymentModal({ transaction, onConfirm, onCancel, loans = [] }) {
   const [loanDueDate, setLoanDueDate] = useState(new Date().toISOString().split('T')[0]);
   const [loanTitle, setLoanTitle] = useState('');
 
+  const [interest, setInterest] = useState('');
+  const [discount, setDiscount] = useState('');
+  const [showExtras, setShowExtras] = useState(false);
+
   const parsedActualAmount = parseCurrencyBRL(actualAmount);
   const parsedAmount = parseCurrencyBRL(amount);
+  const parsedInterest = parseCurrencyBRL(interest) || 0;
+  const parsedDiscount = parseCurrencyBRL(discount) || 0;
+  const effectiveAmount = parsedAmount + parsedInterest - parsedDiscount;
 
   const currentRemaining = isForecast ? Math.max(0, parsedActualAmount - alreadyPaid) : remaining;
 
@@ -71,8 +86,8 @@ export function PaymentModal({ transaction, onConfirm, onCancel, loans = [] }) {
   );
 
   const isValid = isForecast
-    ? (parsedActualAmount > 0 && parsedAmount > 0 && parsedAmount <= currentRemaining && isLoanValid)
-    : (parsedAmount > 0 && parsedAmount <= remaining && isLoanValid);
+    ? (parsedActualAmount > 0 && parsedAmount > 0 && parsedAmount <= currentRemaining && effectiveAmount >= 0 && isLoanValid)
+    : (parsedAmount > 0 && parsedAmount <= remaining && effectiveAmount >= 0 && isLoanValid);
 
   const handleActualAmountChange = (val) => {
     const maskedVal = maskCurrencyBRL(val);
@@ -97,6 +112,8 @@ export function PaymentModal({ transaction, onConfirm, onCancel, loans = [] }) {
         transaction,
         paidAmount: parsedAmount,
         actualAmount: isForecast ? parsedActualAmount : null,
+        interest: parsedInterest > 0 ? parsedInterest : null,
+        discount: parsedDiscount > 0 ? parsedDiscount : null,
         asLoan,
         loanId: asLoan && loanMode === 'existing' ? selectedLoanId : null,
         loanCounterpart: asLoan && loanMode === 'new' ? loanCounterpart : null,
@@ -179,6 +196,70 @@ export function PaymentModal({ transaction, onConfirm, onCancel, loans = [] }) {
                 className="amount-input"
               />
             </div>
+          </div>
+
+          <div style={{ marginTop: '16px', marginBottom: '16px' }}>
+            <button 
+              className="phi-btn" 
+              onClick={() => setShowExtras(!showExtras)}
+              style={{ width: '100%', padding: '8px', textAlign: 'center', background: 'rgba(255,255,255,0.03)' }}
+            >
+              {showExtras ? 'Ocultar Acréscimos / Descontos' : 'Adicionar Juros / Multa ou Desconto'}
+            </button>
+            
+            {showExtras && (
+              <div className="animate-slide-up" style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
+                <div className="amount-input-group" style={{ flex: 1 }}>
+                  <label>Juros / Multa</label>
+                  <div className="amount-input-wrapper">
+                    <span className="currency-prefix">R$</span>
+                    <input
+                      type="text"
+                      value={interest}
+                      onChange={(e) => setInterest(maskCurrencyBRL(e.target.value))}
+                      className="amount-input"
+                    />
+                  </div>
+                </div>
+                <div className="amount-input-group" style={{ flex: 1 }}>
+                  <label>Desconto</label>
+                  <div className="amount-input-wrapper">
+                    <span className="currency-prefix">R$</span>
+                    <input
+                      type="text"
+                      value={discount}
+                      onChange={(e) => setDiscount(maskCurrencyBRL(e.target.value))}
+                      className="amount-input"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {(parsedInterest > 0 || parsedDiscount > 0) && (
+              <div className="animate-fade-in" style={{ marginTop: '16px', padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                  <span>Valor que abate a conta:</span>
+                  <span>{formatCurrency(parsedAmount)}</span>
+                </div>
+                {parsedInterest > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--accent-coral)', marginBottom: '8px' }}>
+                    <span>+ Juros / Multa:</span>
+                    <span>{formatCurrency(parsedInterest)}</span>
+                  </div>
+                )}
+                {parsedDiscount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--accent-emerald)', marginBottom: '8px' }}>
+                    <span>- Desconto:</span>
+                    <span>{formatCurrency(parsedDiscount)}</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', color: 'var(--text-primary)', fontWeight: 'bold', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                  <span>Total movimentado no banco:</span>
+                  <span>{formatCurrency(effectiveAmount)}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Opção de Quitar via Empréstimo */}

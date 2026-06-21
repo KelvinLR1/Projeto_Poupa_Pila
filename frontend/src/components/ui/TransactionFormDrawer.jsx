@@ -216,7 +216,7 @@ export function TransactionFormDrawer({ onClose }) {
           <div className="drawer-body">
             {/* Seção 1: Tipo, Valor e Parcelamento */}
             <div className="drawer-section">
-              <h4 className="section-title">Valor e Tipo</h4>
+              <h4 className="drawer-section-title">Tipo da Transação</h4>
               <div className="form-row">
                 <div className="form-group flex-1">
                   <label>Tipo de Lançamento</label>
@@ -371,7 +371,7 @@ export function TransactionFormDrawer({ onClose }) {
 
             {/* Seção 2: Dados Gerais */}
             <div className="drawer-section">
-              <h4 className="section-title">Dados Gerais</h4>
+              <h4 className="drawer-section-title">Detalhes da Transação</h4>
               <div className="form-row">
                 <div className="form-group flex-2">
                   <label>Descrição</label>
@@ -431,23 +431,14 @@ export function TransactionFormDrawer({ onClose }) {
 
                   {!isAddingCategory ? (
                     <>
-                      <input 
-                        type="text" 
-                        required
-                        className="form-input"
+                      <CustomSelect
                         value={category}
                         onChange={(e) => setCategory(e.target.value)}
-                        placeholder="Ex: Moradia"
-                        list="drawer-categories"
-                      />
-                      <datalist id="drawer-categories">
-                        {categories
+                        placeholder="Selecione uma categoria..."
+                        options={categories
                           .filter(c => c.active !== false && c.type === type)
-                          .map(c => (
-                            <option key={c.id} value={c.name} />
-                          ))
-                        }
-                      </datalist>
+                          .map(c => ({ value: c.name, label: c.name }))}
+                      />
                     </>
                   ) : (
                     <div className="inline-add-category-box" style={{

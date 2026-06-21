@@ -566,7 +566,7 @@ app.get('/api/finance/data', authenticate, (req, res) => {
     
     // Buscar settlements de cada transação
     const formattedTransactions = transactions.map(t => {
-      const settlements = db.prepare('SELECT id, date, amount, accountId FROM settlements WHERE transaction_id = ?').all(t.id);
+      const settlements = db.prepare('SELECT id, date, amount, accountId, interest, discount FROM settlements WHERE transaction_id = ?').all(t.id);
       return { ...t, settlements };
     });
 
@@ -621,13 +621,12 @@ app.put('/api/finance/accounts/:id', authenticate, (req, res) => {
   const { id } = req.params;
   const { name, type, balance, color } = req.body;
   try {
-    // Monta o update de forma simples
     const updateAccount = db.prepare(`
       UPDATE accounts 
-      SET name = ?, type = ?, balance = ?, color = ?
+      SET name = ?, type = ?, color = ?
       WHERE id = ? AND user_id = ?
     `);
-    updateAccount.run(name, type, parseFloat(balance), color, id, req.user.id);
+    updateAccount.run(name, type, color, id, req.user.id);
     res.json({ success: true });
   } catch (error) {
     console.error('Erro ao editar conta:', error);
@@ -865,7 +864,7 @@ app.post('/api/finance/transfers', authenticate, (req, res) => {
 
 app.post('/api/finance/transactions/:id/pay', authenticate, (req, res) => {
   const { id } = req.params;
-  const { paidAmount, actualAmount, asLoan, loanId, loanCounterpart, loanDueDate, loanTitle } = req.body;
+  const { paidAmount, actualAmount, interest, discount, asLoan, loanId, loanCounterpart, loanDueDate, loanTitle } = req.body;
 
   try {
     db.exec('BEGIN TRANSACTION');
@@ -905,12 +904,14 @@ app.post('/api/finance/transactions/:id/pay', authenticate, (req, res) => {
 
     const newSettlementId = Math.random().toString(36).substr(2, 9);
     const todayStr = new Date().toISOString().split('T')[0];
+    const interestVal = parseFloat(interest) || 0;
+    const discountVal = parseFloat(discount) || 0;
     
     const insertSettlement = db.prepare(`
-      INSERT INTO settlements (id, transaction_id, date, amount, accountId)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO settlements (id, transaction_id, date, amount, accountId, interest, discount)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
-    insertSettlement.run(newSettlementId, id, todayStr, valueToSettle, tx.accountId);
+    insertSettlement.run(newSettlementId, id, todayStr, valueToSettle, tx.accountId, interestVal, discountVal);
 
     const newTotalPaid = alreadyPaid + valueToSettle;
     const newStatus = Math.abs(tx.amount - newTotalPaid) < 0.01 ? 'paid' : 'partial';
@@ -1000,14 +1001,16 @@ app.post('/api/finance/transactions/:id/pay', authenticate, (req, res) => {
       }
     } else {
       // Fluxo normal: atualiza saldo da conta bancária
-      const amountChange = tx.type === 'income' ? valueToSettle : -valueToSettle;
+      // Valor efetivo que movimenta a conta: Principal + Juros - Descontos
+      const effectiveAmount = valueToSettle + interestVal - discountVal;
+      const amountChange = tx.type === 'income' ? effectiveAmount : -effectiveAmount;
       const updateBalance = db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?');
       updateBalance.run(amountChange, tx.accountId);
     }
 
     db.exec('COMMIT');
     
-    const updatedSettlements = db.prepare('SELECT id, date, amount, accountId FROM settlements WHERE transaction_id = ?').all(id);
+    const updatedSettlements = db.prepare('SELECT id, date, amount, accountId, interest, discount FROM settlements WHERE transaction_id = ?').all(id);
     res.json({ success: true, status: newStatus, settlements: updatedSettlements });
   } catch (error) {
     db.exec('ROLLBACK');
@@ -1103,24 +1106,25 @@ app.post('/api/finance/loans', authenticate, (req, res) => {
     const historyId = Math.random().toString(36).substr(2, 9);
     const dateStr = date || new Date().toISOString().split('T')[0];
 
-    // Cria transação correspondente no extrato
-    const txId = Math.random().toString(36).substr(2, 9);
+    // Ajusta saldo da conta e insere transação no extrato apenas se solicitado
     const txType = type === 'lent' ? 'expense' : 'income';
-    
-    // Ajusta saldo da conta
-    const amountChange = txType === 'income' ? parseFloat(amount) : -parseFloat(amount);
-    const updateBalance = db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ?');
-    updateBalance.run(amountChange, accountId, req.user.id);
+    let txId = null;
+    if (req.body.createTransaction !== false) {
+      txId = Math.random().toString(36).substr(2, 9);
+      
+      const amountChange = txType === 'income' ? parseFloat(amount) : -parseFloat(amount);
+      const updateBalance = db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ?');
+      updateBalance.run(amountChange, accountId, req.user.id);
 
-    // Insere transação no extrato
-    const insertTx = db.prepare(`
-      INSERT INTO transactions (id, user_id, accountId, type, amount, category, description, date, status, is_forecast)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'paid', 0)
-    `);
-    const txDescription = type === 'lent'
-      ? `Empréstimo feito para ${counterpart.trim()}${title ? ` (${title})` : ''}`
-      : `Empréstimo pego com ${counterpart.trim()}${title ? ` (${title})` : ''}`;
-    insertTx.run(txId, req.user.id, accountId, txType, parseFloat(amount), category, description || txDescription, dateStr);
+      const insertTx = db.prepare(`
+        INSERT INTO transactions (id, user_id, accountId, type, amount, category, description, date, status, is_forecast)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'paid', 0)
+      `);
+      const txDescription = type === 'lent'
+        ? `Empréstimo feito para ${counterpart.trim()}${title ? ` (${title})` : ''}`
+        : `Empréstimo pego com ${counterpart.trim()}${title ? ` (${title})` : ''}`;
+      insertTx.run(txId, req.user.id, accountId, txType, parseFloat(amount), category, description || txDescription, dateStr);
+    }
 
     if (existingLoan) {
       // 1. Insere histórico
@@ -1208,24 +1212,25 @@ app.post('/api/finance/loans/:id/pay', authenticate, (req, res) => {
     const historyId = Math.random().toString(36).substr(2, 9);
     const dateStr = date || new Date().toISOString().split('T')[0];
 
-    // Cria transação correspondente no extrato
-    const txId = Math.random().toString(36).substr(2, 9);
+    // Ajusta saldo da conta e insere transação no extrato apenas se solicitado
     const txType = loan.type === 'lent' ? 'income' : 'expense';
+    let txId = null;
+    if (req.body.createTransaction !== false) {
+      txId = Math.random().toString(36).substr(2, 9);
+      
+      const amountChange = txType === 'income' ? parseFloat(amount) : -parseFloat(amount);
+      const updateBalance = db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ?');
+      updateBalance.run(amountChange, accountId, req.user.id);
 
-    // Ajusta saldo da conta
-    const amountChange = txType === 'income' ? parseFloat(amount) : -parseFloat(amount);
-    const updateBalance = db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ?');
-    updateBalance.run(amountChange, accountId, req.user.id);
-
-    // Insere transação no extrato
-    const insertTx = db.prepare(`
-      INSERT INTO transactions (id, user_id, accountId, type, amount, category, description, date, status, is_forecast)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'paid', 0)
-    `);
-    const txDescription = loan.type === 'lent'
-      ? `Recebimento de parcela de ${loan.counterpart}`
-      : `Pagamento de parcela para ${loan.counterpart}`;
-    insertTx.run(txId, req.user.id, accountId, txType, parseFloat(amount), category, description || txDescription, dateStr);
+      const insertTx = db.prepare(`
+        INSERT INTO transactions (id, user_id, accountId, type, amount, category, description, date, status, is_forecast)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'paid', 0)
+      `);
+      const txDescription = loan.type === 'lent'
+        ? `Recebimento de parcela de ${loan.counterpart}`
+        : `Pagamento de parcela para ${loan.counterpart}`;
+      insertTx.run(txId, req.user.id, accountId, txType, parseFloat(amount), category, description || txDescription, dateStr);
+    }
 
     // Adiciona histórico de pagamento
     const insertHistory = db.prepare(`
@@ -1385,6 +1390,40 @@ app.delete('/api/finance/loans/history/:historyId', authenticate, (req, res) => 
     res.status(500).json({ error: 'Erro ao excluir lançamento.' });
   }
 });
+app.delete('/api/finance/transactions/:id', authenticate, (req, res) => {
+  const { id } = req.params;
+  try {
+    db.exec('BEGIN TRANSACTION');
+
+    const selectTx = db.prepare('SELECT * FROM transactions WHERE id = ? AND user_id = ?');
+    const tx = selectTx.all(id, req.user.id)[0];
+    if (!tx) {
+      db.exec('ROLLBACK');
+      return res.status(404).json({ error: 'Transação não encontrada.' });
+    }
+
+    const settlements = db.prepare('SELECT * FROM settlements WHERE transaction_id = ?').all(tx.id);
+    if (settlements.length > 0) {
+      db.exec('ROLLBACK');
+      return res.status(400).json({ error: 'Não é possível excluir uma transação que possui pagamentos.' });
+    }
+
+    if (tx.transfer_id) {
+       db.exec('ROLLBACK');
+       return res.status(400).json({ error: 'Não é possível excluir uma transferência por aqui.' });
+    }
+
+    const deleteTx = db.prepare('DELETE FROM transactions WHERE id = ?');
+    deleteTx.run(tx.id);
+
+    db.exec('COMMIT');
+    res.json({ success: true });
+  } catch (error) {
+    db.exec('ROLLBACK');
+    console.error('Erro ao excluir transação:', error);
+    res.status(500).json({ error: 'Erro ao excluir transação.' });
+  }
+});
 
 app.delete('/api/finance/settlements/:settlementId', authenticate, (req, res) => {
   const { settlementId } = req.params;
@@ -1435,8 +1474,12 @@ app.delete('/api/finance/settlements/:settlementId', authenticate, (req, res) =>
     const deleteSettlement = db.prepare('DELETE FROM settlements WHERE id = ?');
     deleteSettlement.run(settlementId);
 
-    // Reverte o saldo da conta
-    const amountChange = tx.type === 'income' ? -settlement.amount : settlement.amount;
+    // Reverte o saldo da conta usando o valor efetivo
+    const interestVal = settlement.interest || 0;
+    const discountVal = settlement.discount || 0;
+    const effectiveAmount = settlement.amount + interestVal - discountVal;
+    
+    const amountChange = tx.type === 'income' ? -effectiveAmount : effectiveAmount;
     const updateBalance = db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ?');
     updateBalance.run(amountChange, settlement.accountId, req.user.id);
 

@@ -11,11 +11,13 @@ import { useAuth } from './context/AuthContext'
 import { Login } from './pages/Login/Login'
 import { Settings } from './pages/Settings/Settings'
 import { Analytics } from './pages/Analytics/Analytics'
+import { GlobalConfirmModal } from './components/ui/ConfirmModal'
 
 function App() {
   const { isAuthenticated, loading } = useAuth()
   const [activeTab, setActiveTab] = useState('dashboard')
   const [filterAccountId, setFilterAccountId] = useState('all')
+  const [transactionsFilterTab, setTransactionsFilterTab] = useState('all')
 
   if (loading) {
     return (
@@ -36,13 +38,20 @@ function App() {
     return <Login />
   }
 
+  const handleNavClick = (tabId) => {
+    // Clear the transaction page filters when navigating via the sidebar/bottom-nav
+    setTransactionsFilterTab('all')
+    setFilterAccountId('all')
+    setActiveTab(tabId)
+  }
+
   return (
-    <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
+    <Layout activeTab={activeTab} setActiveTab={handleNavClick}>
       {activeTab === 'dashboard' && (
-        <Dashboard setActiveTab={setActiveTab} setFilterAccountId={setFilterAccountId} />
+        <Dashboard setActiveTab={setActiveTab} setFilterAccountId={setFilterAccountId} setTransactionsFilterTab={setTransactionsFilterTab} />
       )}
       {activeTab === 'transactions' && (
-        <Transactions filterAccountId={filterAccountId} setFilterAccountId={setFilterAccountId} />
+        <Transactions filterAccountId={filterAccountId} setFilterAccountId={setFilterAccountId} filterTab={transactionsFilterTab} setFilterTab={setTransactionsFilterTab} />
       )}
       {activeTab === 'loans' && <Loans />}
       {activeTab === 'cashflow' && <CashFlow />}
@@ -51,6 +60,7 @@ function App() {
       {activeTab === 'ofx' && <OFXImport />}
       {activeTab === 'vault' && <Vault />}
       {activeTab === 'settings' && <Settings />}
+      <GlobalConfirmModal />
     </Layout>
   )
 }

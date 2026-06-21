@@ -154,8 +154,8 @@
 }
 
 @keyframes empty-state-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(12px) scale(0.98); filter: blur(4px); }
+  to   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
 }
 
 .tx-timeline-empty {
@@ -166,229 +166,178 @@
   animation: empty-state-in 340ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.tx-timeline-empty.no-transition {
-  animation: none !important;
-}
+/* =========================================================
+   NOVA TIMELINE (PAYMENT HISTORY ITEM)
+========================================================= */
 
-.tx-timeline {
+.phi-list {
   display: flex;
   flex-direction: column;
-  position: relative;
-  padding-left: 20px;
-  gap: 0; /* gap gerenciado por margin no slot */
+  gap: 0;
 }
 
-.tx-timeline::before {
-  content: '';
-  position: absolute;
-  left: 5px;
-  top: 8px;
-  bottom: 8px;
-  width: 2px;
-  background: rgba(255, 255, 255, 0.07);
-  border-radius: 2px;
-}
-
-/* ── Slot wrapper — técnica grid collapse para animar altura ── */
-.tx-timeline-slot {
-  position: relative;
-  display: grid;
-  grid-template-rows: 1fr;
-  margin-bottom: 10px;
-  transition:
-    grid-template-rows 380ms cubic-bezier(0.4, 0, 0.2, 1),
-    margin-bottom     380ms cubic-bezier(0.4, 0, 0.2, 1),
-    opacity           260ms ease;
-}
-
-.tx-timeline-slot:last-child {
-  margin-bottom: 0;
-}
-
-/* Estado de remoção: colapsa altura E espaçamento suavemente */
-.tx-timeline-slot.removing {
-  grid-template-rows: 0fr;
-  margin-bottom: 0;
-  opacity: 0;
-}
-
-/* Inner wrapper obrigatório para o grid collapse funcionar */
-.tx-timeline-slot-inner {
-  min-height: 0;
-}
-
-.tx-timeline-slot.removing .tx-timeline-slot-inner {
-  overflow: hidden;
-}
-
-/* O item em si — apenas layout, sem animação de remoção aqui */
-.tx-timeline-item {
-  position: relative;
+.phi-item {
   display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  padding-bottom: 2px; /* evita clip do box-shadow do dot */
+  gap: 16px;
+  overflow: hidden;
+  max-height: 250px;
+  opacity: 1;
+  transform: translateX(0);
+  transition: max-height 350ms cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 300ms ease,
+              transform 350ms cubic-bezier(0.16, 1, 0.3, 1),
+              margin-bottom 350ms ease;
+  margin-bottom: 0;
 }
 
-.tx-timeline-dot {
-  position: absolute;
-  left: -20px;
-  top: 8px;
-  width: 10px;
-  height: 10px;
+.phi-item.is-removing {
+  max-height: 0;
+  opacity: 0;
+  transform: translateX(-15px);
+  margin-bottom: 0;
+}
+
+.phi-connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 12px;
+  padding-top: 24px;
+}
+
+.phi-dot {
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: var(--surface-light);
-  border: 2px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 0 0 3px #0f0f12;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 0 3px var(--bg-color);
   flex-shrink: 0;
-  z-index: 1;
 }
 
-.tx-timeline-dot.dot-active {
+.phi-dot.active {
   background: var(--accent-emerald);
   border-color: var(--accent-emerald);
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5), 0 0 0 3px #0f0f12;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5), 0 0 0 3px var(--bg-color);
 }
 
-.tx-timeline-content {
+.phi-line {
+  width: 2px;
   flex: 1;
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 10px;
-  padding: 10px 14px;
-  transition: background 200ms ease, border-color 200ms ease;
+  background: rgba(255, 255, 255, 0.06);
+  margin-top: 4px;
+  margin-bottom: -16px; /* Conecta com o próximo dot perfeitamente */
 }
 
-.tx-timeline-item:hover .tx-timeline-content {
-  background: rgba(255, 255, 255, 0.045);
-  border-color: rgba(255, 255, 255, 0.11);
+.phi-content {
+  flex: 1;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  transition: all 250ms ease;
 }
 
-.tx-timeline-row {
+.phi-item:hover .phi-content {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.09);
+}
+
+.phi-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.phi-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 3px;
 }
 
-.tx-timeline-row strong {
-  font-size: 0.875rem;
-  font-weight: 600;
+.phi-header strong {
+  font-size: 0.9rem;
   color: var(--text-primary);
 }
 
-.tx-timeline-amt {
-  font-size: 0.9rem;
+.phi-amount {
   font-weight: 700;
   color: var(--accent-emerald);
 }
 
-.tx-timeline-date {
-  margin: 0;
-  font-size: 0.75rem;
+.phi-delete-btn {
   color: var(--text-muted);
+  opacity: 0;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 150ms ease;
+  transform: scale(0.9);
 }
 
-/* Revela o botão lixeira ao passar o mouse no SLOT */
-.tx-timeline-slot:hover .loan-item-delete-btn {
+.phi-item:hover .phi-delete-btn {
   opacity: 1;
   transform: scale(1);
 }
 
-/* Estado base do botão lixeira na timeline */
-.tx-timeline-content .loan-item-delete-btn {
-  opacity: 0;
-  transform: scale(0.75);
-  transition:
-    opacity   200ms ease,
-    transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1),
-    color     150ms ease;
+.phi-delete-btn:hover {
+  color: var(--accent-coral);
+  background: rgba(244, 63, 94, 0.1);
+  transform: scale(1.1) !important;
 }
 
-.tx-timeline-content .loan-item-delete-btn:hover {
-  color: var(--accent-coral) !important;
-  transform: scale(1.2) !important;
+.phi-date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0;
 }
 
-/* Confirmação inline — animação spring de entrada */
-@keyframes tx-confirm-in {
-  0%   { opacity: 0; transform: translateY(-10px) scale(0.95); }
-  55%  { opacity: 1; }
-  100% { opacity: 1; transform: translateY(0)      scale(1);    }
-}
-
-.tx-settlement-confirm-wrapper {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 280ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.tx-settlement-confirm-wrapper.open {
-  grid-template-rows: 1fr;
-}
-
-.tx-settlement-confirm-inner {
-  overflow: hidden;
-  min-height: 0;
-}
-
-.tx-settlement-confirm {
+.phi-confirm {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-  padding: 8px 10px;
-  background: rgba(251, 191, 36, 0.07);
-  border: 1px solid rgba(251, 191, 36, 0.25);
-  border-radius: 8px;
-  font-size: 0.78rem;
-  color: var(--text-secondary);
-  flex-wrap: wrap;
-  transform-origin: top center;
+  color: var(--accent-gold);
+  font-size: 0.85rem;
+  font-weight: 500;
 }
 
-.tx-settlement-confirm-wrapper.open .tx-settlement-confirm {
-  animation: tx-confirm-in 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
-
-.tx-settlement-confirm-btns {
+.phi-actions {
   display: flex;
   gap: 6px;
-  margin-left: auto;
 }
 
-.tx-confirm-btn {
-  padding: 3px 10px;
+.phi-btn {
+  padding: 4px 10px;
   border-radius: 6px;
-  border: 1px solid transparent;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+  border: 1px solid transparent;
   transition: all 150ms ease;
 }
 
-.tx-confirm-yes {
-  background: rgba(244, 63, 94, 0.12);
-  border-color: rgba(244, 63, 94, 0.3);
-  color: var(--accent-coral);
+.phi-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
-.tx-confirm-yes:hover {
+.phi-btn-danger {
+  background: rgba(244, 63, 94, 0.12);
+  color: var(--accent-coral);
+  border-color: rgba(244, 63, 94, 0.2);
+}
+
+.phi-btn-danger:hover {
   background: rgba(244, 63, 94, 0.22);
 }
 
-.tx-confirm-no {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: var(--text-muted);
-}
-
-.tx-confirm-no:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text-primary);
-}
-
+/* Wrapper para o botão pagar restante */
 .tx-pay-remaining-wrapper {
   display: inline-flex;
   max-width: 0;
@@ -411,4 +360,3 @@
 .tx-pay-remaining-wrapper.no-transition {
   transition: none !important;
 }
-

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useFinance } from '../../context/FinanceContext';
+import { useConfirm } from '../../context/ConfirmContext';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { Button } from './Button';
 import { Badge } from './Badge';
@@ -10,6 +11,7 @@ import './LoanDetailsModal.css';
 
 export function LoanDetailsModal({ loan, onClose, onAddAmount, onRegisterPayment }) {
   const { toggleLoanType, deleteLoanHistoryItem } = useFinance();
+  const { confirm } = useConfirm();
   const containerRef = useRef(null);
   const lastHeightRef = useRef(null);
 
@@ -54,7 +56,7 @@ export function LoanDetailsModal({ loan, onClose, onAddAmount, onRegisterPayment
   });
 
   const handleDeleteItem = async (itemId) => {
-    if (window.confirm('Excluir este lançamento e atualizar os saldos do empréstimo?')) {
+    if (await confirm({ title: 'Excluir Histórico', message: 'Excluir este lançamento e atualizar os saldos do empréstimo?' })) {
       const result = await deleteLoanHistoryItem(itemId);
       if (result && result.loanDeleted) {
         onClose();

@@ -6,6 +6,7 @@
 .transfer-modal-container {
   position: relative;
   overflow: visible !important;
+  max-height: none !important;
   max-width: 520px;
   width: 95%;
   border-radius: var(--radius-lg);

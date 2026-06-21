@@ -7,9 +7,11 @@
 }
 
 .split-modal-container {
-  max-width: 760px;
-  width: 96%;
-  max-height: 90vh;
+  max-width: 580px !important;
+  width: 95% !important;
+  overflow: visible !important;
+  max-height: none !important;
+  margin-bottom: 40px !important;
   display: flex;
   flex-direction: column;
   animation: reconcileModalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;

@@ -165,7 +165,8 @@ export function Analytics() {
     }
   });
 
-  const maxVal = Math.max(...monthlyTotals.map(m => Math.max(m.income, m.expense)), 100);
+  const rawMax = Math.max(...monthlyTotals.map(m => Math.max(m.income, m.expense)));
+  const maxVal = rawMax > 0 ? rawMax : 1;
 
   // --- 5. Análise 50/30/20 ---
   // Necessidades (Essenciais): Alimentação, Moradia, Transporte, Saúde, Educação
@@ -421,19 +422,6 @@ export function Analytics() {
           </div>
 
           <div className="bar-chart-container">
-            {/* Tooltip flutuante */}
-            {hoveredBarMonth && (
-              <div className="analytics-chart-tooltip">
-                <span className="tooltip-title">{hoveredBarMonth.label}</span>
-                <span className="tooltip-row income">
-                  <span>Receitas:</span> <strong>{formatCurrency(hoveredBarMonth.income)}</strong>
-                </span>
-                <span className="tooltip-row expense">
-                  <span>Despesas:</span> <strong>{formatCurrency(hoveredBarMonth.expense)}</strong>
-                </span>
-              </div>
-            )}
-
             <div className="bar-chart-grid">
               {monthlyTotals.map(item => {
                 const incomeHeightPct = (item.income / maxVal) * 100;
@@ -446,16 +434,27 @@ export function Analytics() {
                     onMouseEnter={() => setHoveredBarMonth(item)}
                     onMouseLeave={() => setHoveredBarMonth(null)}
                   >
+                    {hoveredBarMonth?.key === item.key && (
+                      <div className="analytics-chart-tooltip">
+                        <span className="tooltip-title">{item.label}</span>
+                        <span className="tooltip-row income">
+                          <span>Receitas:</span> <strong>{formatCurrency(item.income)}</strong>
+                        </span>
+                        <span className="tooltip-row expense">
+                          <span>Despesas:</span> <strong>{formatCurrency(item.expense)}</strong>
+                        </span>
+                      </div>
+                    )}
                     <div className="bar-pair">
                       {/* Barra de Receitas */}
                       <div 
                         className="chart-bar income-bar"
-                        style={{ height: `${Math.max(incomeHeightPct, 2)}%` }}
+                        style={{ height: item.income > 0 ? `${Math.max(incomeHeightPct, 2)}%` : '0%' }}
                       ></div>
                       {/* Barra de Despesas */}
                       <div 
                         className="chart-bar expense-bar"
-                        style={{ height: `${Math.max(expenseHeightPct, 2)}%` }}
+                        style={{ height: item.expense > 0 ? `${Math.max(expenseHeightPct, 2)}%` : '0%' }}
                       ></div>
                     </div>
                     <span className="bar-month-label">{item.label}</span>

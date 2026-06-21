@@ -10,6 +10,11 @@ import { CustomSelect } from '../../components/ui/CustomSelect';
 import { TransferModal } from '../../components/ui/TransferModal';
 import './Accounts.css';
 
+const PRESET_COLORS = [
+  '#10b981', '#f43f5e', '#3b82f6', '#8b5cf6',
+  '#f59e0b', '#0ea5e9', '#ec4899', '#64748b'
+];
+
 export function Accounts() {
   const { accounts, addAccount, toggleAccountStatus, hideValues } = useFinance();
   const [isAdding, setIsAdding]           = useState(false);
@@ -192,14 +197,27 @@ export function Accounts() {
                 </div>
                 <div className="form-group">
                   <label>Cor Identificadora</label>
-                  <div className="color-input-row">
-                    <input
-                      type="color"
-                      value={newAccount.color}
-                      onChange={(e) => setNewAccount({ ...newAccount, color: e.target.value })}
-                      className="color-picker-input"
-                    />
-                    <span className="color-hex">{newAccount.color.toUpperCase()}</span>
+                  <div className="color-palette-row">
+                    {PRESET_COLORS.map(c => (
+                      <button 
+                        key={c}
+                        type="button"
+                        className={`color-swatch-btn ${newAccount.color === c ? 'active' : ''}`}
+                        style={{ backgroundColor: c }}
+                        onClick={() => setNewAccount({ ...newAccount, color: c })}
+                      />
+                    ))}
+                    <div className="custom-color-wrapper" title="Cor Personalizada">
+                      <input 
+                        type="color" 
+                        value={newAccount.color}
+                        onChange={(e) => setNewAccount({ ...newAccount, color: e.target.value })}
+                        className="custom-color-input-hidden"
+                      />
+                      <button type="button" className="custom-color-btn" style={{ backgroundColor: PRESET_COLORS.includes(newAccount.color) ? 'transparent' : newAccount.color, borderStyle: PRESET_COLORS.includes(newAccount.color) ? 'dashed' : 'solid', borderColor: PRESET_COLORS.includes(newAccount.color) ? 'rgba(255,255,255,0.4)' : '#fff' }}>
+                        {PRESET_COLORS.includes(newAccount.color) ? '+' : ''}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

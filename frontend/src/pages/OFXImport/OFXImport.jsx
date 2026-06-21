@@ -25,7 +25,7 @@ function similarity(a = '', b = '') {
 }
 
 export function OFXImport() {
-  const { transactions, accounts, loans, addTransaction, markTransactionAsPaid, addLoan, payLoan } = useFinance();
+  const { transactions, accounts, loans, categories, addTransaction, markTransactionAsPaid, addLoan, payLoan } = useFinance();
   const [isDragging, setIsDragging] = useState(false);
   const [parsed, setParsed] = useState(null); // { transactions, balance, bankId }
   const [accountId, setAccountId] = useState(accounts[0]?.id || '');
@@ -637,17 +637,20 @@ export function OFXImport() {
                           </span>
                           <div className="ofx-category-select-wrapper">
                             <span className="ofx-category-label">Categoria:</span>
-                            <input
-                              type="text"
-                              list="existing-categories"
-                              className="ofx-category-input"
+                            <CustomSelect
                               value={txCategories[tx.fitId] || ''}
                               onChange={(e) => {
                                 const val = e.target.value;
                                 setTxCategories(prev => ({ ...prev, [tx.fitId]: val }));
                               }}
-                              onClick={(e) => e.stopPropagation()}
-                              placeholder="Selecione ou digite..."
+                              options={[
+                                { value: '', label: 'Selecione...' },
+                                ...categories
+                                  .filter(c => c.active !== false && c.type === tx.type)
+                                  .map(c => ({ value: c.name, label: c.name }))
+                              ]}
+                              className="ofx-category-input"
+                              placeholder="Selecione..."
                             />
                           </div>
                         </div>
@@ -772,11 +775,7 @@ export function OFXImport() {
         />
       )}
 
-      <datalist id="existing-categories">
-        {Array.from(new Set(transactions.map(t => t.category).filter(Boolean))).map(cat => (
-          <option key={cat} value={cat} />
-        ))}
-      </datalist>
+
     </div>
   );
 }

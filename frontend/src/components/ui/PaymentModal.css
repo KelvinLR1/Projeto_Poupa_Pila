@@ -13,13 +13,13 @@
 }
 
 @keyframes modalIn {
-  from { opacity: 0; transform: translateY(24px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; transform: translateY(40px) scale(0.95); filter: blur(8px); }
+  to   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
 }
 
 @keyframes modalOut {
-  from { opacity: 1; transform: translateY(0) scale(1); }
-  to   { opacity: 0; transform: translateY(24px) scale(0.97); }
+  from { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  to   { opacity: 0; transform: translateY(40px) scale(0.95); filter: blur(8px); }
 }
 
 .modal-overlay.closing {
@@ -27,7 +27,7 @@
 }
 
 .modal-overlay.closing .modal-container {
-  animation: modalOut 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: modalOut 350ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 
@@ -39,16 +39,18 @@
   -webkit-backdrop-filter: blur(10px);
   z-index: 200;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 24px;
-  animation: overlayIn 200ms ease forwards;
+  padding: 8vh 24px 24px;
+  animation: overlayIn 350ms ease forwards;
+  overflow-y: auto;
 }
 
 .modal-container {
   width: 100%;
   max-width: 480px;
-  max-height: calc(100vh - 48px);
+  max-height: calc(92vh - 24px);
+  margin-bottom: auto; /* Ensures it doesn't stretch if align-items acts weird */
   display: flex;
   flex-direction: column;
   background: linear-gradient(160deg, rgba(26, 26, 32, 0.98) 0%, rgba(13, 13, 18, 0.99) 100%);
@@ -61,8 +63,7 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(40px);
   overflow: hidden;
-  animation: modalIn 280ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: modalIn 450ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* Header compartilhado */
@@ -133,6 +134,7 @@
   flex-direction: column;
   gap: 20px;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   flex: 1;
 }
 
@@ -335,9 +337,9 @@
 }
 
 .checkbox-label input[type="checkbox"]:checked + .checkbox-custom {
-  background: var(--accent-purple, #8b5cf6);
-  border-color: var(--accent-purple, #8b5cf6);
-  box-shadow: 0 0 10px rgba(139, 92, 246, 0.4);
+  background: var(--accent-emerald);
+  border-color: var(--accent-emerald);
+  box-shadow: 0 0 12px var(--accent-emerald-glow);
 }
 
 .checkbox-label input[type="checkbox"]:checked + .checkbox-custom::after {
@@ -451,14 +453,9 @@
   margin-top: 12px;
 }
 
-/* Custom overrides to prevent datepicker and select clipping */
+/* Custom overrides */
 .payment-modal-container {
   max-width: 600px !important;
-  overflow: visible !important;
-}
-
-.payment-modal-container .modal-body {
-  overflow: visible !important;
 }
 
 @media (max-width: 768px) {

@@ -891,22 +891,7 @@
 }
 
 .cat-item-rule-select {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
-  color: var(--text-secondary);
-  font-size: 0.82rem;
-  padding: 6px 10px;
-  border-radius: 8px;
-  outline: none;
-  cursor: pointer;
-  transition: all var(--transition-fast, 0.2s) ease;
   width: 170px;
-}
-
-.cat-item-rule-select:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.15);
-  color: var(--text-primary);
 }
 
 .cat-item-action-wrapper {

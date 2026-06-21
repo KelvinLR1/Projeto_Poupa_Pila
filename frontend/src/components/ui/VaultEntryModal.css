@@ -12,6 +12,14 @@
   animation: fadeIn 200ms ease forwards;
 }
 
+.vault-modal-container {
+  max-width: 550px !important;
+  width: 100% !important;
+  overflow: visible !important;
+  max-height: none !important;
+  margin-bottom: 40px !important;
+}
+
 .vault-modal {
   width: 100%;
   max-width: 540px;

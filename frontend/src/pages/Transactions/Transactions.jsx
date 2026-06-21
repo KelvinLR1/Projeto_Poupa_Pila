@@ -25,10 +25,9 @@ const getInitialDates = () => {
   };
 };
 
-export function Transactions({ filterAccountId, setFilterAccountId }) {
-  const { transactions, accounts, loans, hideValues, markTransactionAsPaid, deleteSettlement, categories } = useFinance();
+export function Transactions({ filterAccountId, setFilterAccountId, filterTab = 'all', setFilterTab = () => {} }) {
+  const { transactions, accounts, loans, hideValues, markTransactionAsPaid, deleteSettlement, deleteTransaction, categories } = useFinance();
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState('all'); // 'all', 'payable', 'receivable'
   const [filterCategory, setFilterCategory] = useState('all');
   const [selectedTxForPayment, setSelectedTxForPayment] = useState(null);
   const [selectedTxForDetailsId, setSelectedTxForDetailsId] = useState(null);
@@ -44,7 +43,7 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
 
   useEffect(() => {
     setVisibleCount(20);
-  }, [searchTerm, filterAccountId, activeTab, startDate, endDate, filterCategory, ignoreDate]);
+  }, [searchTerm, filterAccountId, filterTab, startDate, endDate, filterCategory, ignoreDate]);
 
   const allRef = useRef(null);
   const payableRef = useRef(null);
@@ -54,9 +53,9 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
   useEffect(() => {
     const updateIndicator = () => {
       let activeRef;
-      if (activeTab === 'all') activeRef = allRef;
-      else if (activeTab === 'payable') activeRef = payableRef;
-      else if (activeTab === 'receivable') activeRef = receivableRef;
+      if (filterTab === 'all') activeRef = allRef;
+      else if (filterTab === 'payable') activeRef = payableRef;
+      else if (filterTab === 'receivable') activeRef = receivableRef;
 
       if (activeRef && activeRef.current) {
         const el = activeRef.current;
@@ -76,10 +75,10 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
       window.removeEventListener('resize', updateIndicator);
       clearTimeout(timer);
     };
-  }, [activeTab]);
+  }, [filterTab]);
 
-  const handleConfirmPayment = ({ transaction, paidAmount, actualAmount, asLoan, loanId, loanCounterpart, loanDueDate, loanTitle }) => {
-    markTransactionAsPaid(transaction.id, paidAmount, actualAmount, asLoan, loanId, loanCounterpart, loanDueDate, loanTitle);
+  const handleConfirmPayment = ({ transaction, paidAmount, actualAmount, interest, discount, asLoan, loanId, loanCounterpart, loanDueDate, loanTitle }) => {
+    markTransactionAsPaid(transaction.id, paidAmount, actualAmount, asLoan, loanId, loanCounterpart, loanDueDate, loanTitle, interest, discount);
     setSelectedTxForPayment(null);
   };
 
@@ -96,8 +95,8 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
 
   const filteredTransactions = transactions
     .filter(tx => {
-      const matchesTab = activeTab === 'payable' ? (tx.type === 'expense' && tx.status === 'pending') :
-                         activeTab === 'receivable' ? (tx.type === 'income' && tx.status === 'pending') : true;
+      const matchesTab = filterTab === 'payable' ? (tx.type === 'expense' && tx.status === 'pending') :
+                         filterTab === 'receivable' ? (tx.type === 'income' && tx.status === 'pending') : true;
       
       const matchesAccount = filterAccountId === 'all' || tx.accountId === filterAccountId;
       
@@ -119,9 +118,9 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
       <div className="page-header">
         <div>
           <h2 className="page-title">
-            {activeTab === 'all' && 'Extrato Global'}
-            {activeTab === 'payable' && 'Contas a Pagar'}
-            {activeTab === 'receivable' && 'Contas a Receber'}
+            {filterTab === 'all' && 'Extrato Global'}
+            {filterTab === 'payable' && 'Contas a Pagar'}
+            {filterTab === 'receivable' && 'Contas a Receber'}
           </h2>
           <p className="page-subtitle">Acompanhe todas as suas movimentações financeiras.</p>
         </div>
@@ -136,15 +135,15 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
       <div className="transactions-tabs">
         <button 
           ref={allRef}
-          className={`tx-tab ${activeTab === 'all' ? 'active' : ''}`}
-          onClick={() => setActiveTab('all')}
+          className={`tx-tab ${filterTab === 'all' ? 'active' : ''}`}
+          onClick={() => setFilterTab('all')}
         >
           Extrato Completo
         </button>
         <button 
           ref={payableRef}
-          className={`tx-tab ${activeTab === 'payable' ? 'active text-coral' : ''}`}
-          onClick={() => setActiveTab('payable')}
+          className={`tx-tab ${filterTab === 'payable' ? 'active text-coral' : ''}`}
+          onClick={() => setFilterTab('payable')}
         >
           Contas a Pagar
           <Badge variant="danger" className="ml-2">
@@ -153,8 +152,8 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
         </button>
         <button 
           ref={receivableRef}
-          className={`tx-tab ${activeTab === 'receivable' ? 'active text-emerald' : ''}`}
-          onClick={() => setActiveTab('receivable')}
+          className={`tx-tab ${filterTab === 'receivable' ? 'active text-emerald' : ''}`}
+          onClick={() => setFilterTab('receivable')}
         >
           Contas a Receber
           <Badge variant="success" className="ml-2">
@@ -162,7 +161,7 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
           </Badge>
         </button>
         <div 
-          className={`tx-tab-indicator ${activeTab}`}
+          className={`tx-tab-indicator ${filterTab}`}
           style={{
             width: indicatorStyle.width,
             transform: `translateX(${indicatorStyle.left}px)`
@@ -245,7 +244,7 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
           </div>
         </div>
 
-        <div className="transactions-table animate-fade-in" key={activeTab}>
+        <div className="transactions-table animate-fade-in" key={filterTab}>
           {displayedTransactions.map(tx => (
              <div 
                key={tx.id} 
@@ -274,6 +273,27 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
                 <span className={`tx-amount ${tx.type === 'income' ? 'text-emerald' : ''}`}>
                   {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount, hideValues)}
                 </span>
+                
+                {tx.status === 'partial' && tx.settlements && tx.settlements.length > 0 && (
+                  <div className="tx-partial-inline">
+                    {(() => {
+                      const paid = tx.settlements.reduce((sum, s) => sum + s.amount, 0);
+                      const remaining = tx.amount - paid;
+                      const percent = Math.min(100, Math.max(0, (paid / tx.amount) * 100));
+                      return (
+                        <>
+                          <div className="tx-partial-inline-stats">
+                            <span className="tx-partial-paid">Pago: {formatCurrency(paid, hideValues)}</span>
+                            <span className="tx-partial-remaining">Falta: {formatCurrency(remaining, hideValues)}</span>
+                          </div>
+                          <div className="tx-partial-inline-bar-bg">
+                            <div className="tx-partial-inline-bar-fill" style={{ width: `${percent}%` }}></div>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                )}
                 <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                   {tx.is_forecast === 1 && (
                     <Badge variant="purple">Previsão</Badge>
@@ -324,6 +344,10 @@ export function Transactions({ filterAccountId, setFilterAccountId }) {
         onPayRemaining={handlePayRemaining}
         onDeleteSettlement={async (txId, settlementId) => {
           await deleteSettlement(settlementId);
+        }}
+        onDeleteTransaction={async (txId) => {
+          await deleteTransaction(txId);
+          setSelectedTxForDetailsId(null);
         }}
       />
 

@@ -3,6 +3,8 @@
 .acc-edit-container {
   max-width: 440px;
   overflow: visible !important;
+  max-height: none !important;
+  margin-bottom: 40px !important;
 }
 
 .acc-edit-body {

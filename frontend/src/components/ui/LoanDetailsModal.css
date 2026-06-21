@@ -386,6 +386,8 @@
   overflow-y: auto;
   max-height: 320px; /* limits height and enables scrolling for long histories */
   padding-right: 8px;
+  padding-left: 4px; /* Prevents left box-shadows/borders from being clipped */
+  margin-left: -4px; /* Compensate padding to keep alignment */
 }
 
 .loan-timeline {
@@ -471,7 +473,7 @@
 .loan-timeline-desc {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;

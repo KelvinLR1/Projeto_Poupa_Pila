@@ -382,9 +382,9 @@
 /* Tooltip Customizado */
 .analytics-chart-tooltip {
   position: absolute;
-  bottom: 250px;
+  bottom: 100%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateY(-10px);
   background: rgba(15, 15, 20, 0.88);
   border: 1px solid rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(12px);
@@ -396,9 +396,25 @@
   gap: 4px;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
   pointer-events: none;
-  z-index: 10;
-  animation: fadeIn 0.15s ease-out;
-  min-width: 130px;
+  z-index: 100;
+  animation: tooltipFadeIn 0.2s ease-out;
+  min-width: 140px;
+}
+
+.analytics-chart-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px;
+  border-style: solid;
+  border-color: rgba(15, 15, 20, 0.88) transparent transparent transparent;
+}
+
+@keyframes tooltipFadeIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(0); }
+  to { opacity: 1; transform: translateX(-50%) translateY(-10px); }
 }
 
 .tooltip-title {

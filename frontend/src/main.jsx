@@ -45,15 +45,18 @@ if (savedMode === 'light') {
 import { FinanceProvider } from './context/FinanceContext.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { VaultProvider } from './context/VaultContext.jsx'
+import { ConfirmProvider } from './context/ConfirmContext.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <AuthProvider>
-      <FinanceProvider>
-        <VaultProvider>
-          <App />
-        </VaultProvider>
-      </FinanceProvider>
+      <ConfirmProvider>
+        <FinanceProvider>
+          <VaultProvider>
+            <App />
+          </VaultProvider>
+        </FinanceProvider>
+      </ConfirmProvider>
     </AuthProvider>
   </StrictMode>,
 )

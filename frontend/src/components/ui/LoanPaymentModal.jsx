@@ -19,6 +19,7 @@ export function LoanPaymentModal({ loan, onConfirm, onCancel }) {
   const activeAccounts = accounts.filter(a => a.active !== false);
   const [accountId, setAccountId] = useState(activeAccounts[0]?.id || '');
   const [category, setCategory] = useState('');
+  const [createTransaction, setCreateTransaction] = useState(true);
 
   const [isClosing, setIsClosing] = useState(false);
 
@@ -49,17 +50,18 @@ export function LoanPaymentModal({ loan, onConfirm, onCancel }) {
   }, [categories, loan.type]);
 
   const parsedAmount = parseCurrencyBRL(amount);
-  const isValid = parsedAmount > 0 && parsedAmount <= remaining;
+  const isValid = parsedAmount > 0;
 
   const handleConfirm = () => {
-    if (!isValid || !accountId || !category) return;
+    if (!isValid || (createTransaction && (!accountId || !category))) return;
     onConfirm(
       loan.id, 
       parsedAmount, 
       date, 
       description || (loan.type === 'lent' ? 'Recebimento de parcela' : 'Pagamento de parcela'),
       accountId,
-      category
+      category,
+      createTransaction
     );
     handleClose();
   };
@@ -123,14 +125,37 @@ export function LoanPaymentModal({ loan, onConfirm, onCancel }) {
             />
           </div>
 
-          {/* Account and Category row */}
-          <div className="form-row" style={{ marginTop: '16px', display: 'flex', gap: '16px' }}>
+          <div className="form-group" style={{ marginTop: '16px' }}>
+            <label>Data da Baixa</label>
+            <CustomDatePicker
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
+          </div>
+
+          <div className="loan-checkbox-container" style={{ margin: '16px 0' }}>
+            <label className="checkbox-label">
+              <input 
+                type="checkbox" 
+                checked={createTransaction}
+                onChange={(e) => setCreateTransaction(e.target.checked)}
+              />
+              <div className="checkbox-custom"></div>
+              <div className="checkbox-text">
+                <strong>Contabilizar no saldo e extrato</strong>
+                <span>Gera um lançamento financeiro real que afeta o saldo da conta, Análises e Fluxo de Caixa.</span>
+              </div>
+            </label>
+          </div>
+
+          <div className={`form-row ${!createTransaction ? 'disabled-opacity' : ''}`} style={{ display: 'flex', gap: '16px', transition: 'opacity 0.3s' }}>
             <div className="form-group" style={{ flex: 1 }}>
               <label>Conta Vinculada</label>
               <CustomSelect
                 value={accountId}
                 onChange={(e) => setAccountId(e.target.value)}
                 options={activeAccounts.map(a => ({ value: a.id, label: a.name }))}
+                disabled={!createTransaction}
               />
             </div>
             <div className="form-group" style={{ flex: 1 }}>
@@ -141,16 +166,9 @@ export function LoanPaymentModal({ loan, onConfirm, onCancel }) {
                 options={categories
                   .filter(c => c.active !== false && c.type === (loan.type === 'lent' ? 'income' : 'expense'))
                   .map(c => ({ value: c.name, label: c.name }))}
+                disabled={!createTransaction}
               />
             </div>
-          </div>
-
-          <div className="form-group" style={{ marginTop: '16px' }}>
-            <label>Data da Baixa</label>
-            <CustomDatePicker
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
           </div>
 
           {parsedAmount === remaining && isValid && (
@@ -161,8 +179,9 @@ export function LoanPaymentModal({ loan, onConfirm, onCancel }) {
           )}
 
           {parsedAmount > remaining && (
-            <div className="error-info">
-              O valor não pode ser maior que o saldo pendente ({formatCurrency(remaining)}).
+            <div className="partial-info" style={{ backgroundColor: 'rgba(168, 85, 247, 0.06)', borderColor: 'rgba(168, 85, 247, 0.2)', color: '#c084fc' }}>
+              <strong>Inversão de Empréstimo Automática</strong>
+              <p>O valor excede o saldo pendente. A diferença ({formatCurrency(parsedAmount - remaining)}) converterá o registro em <b>{loan.type === 'lent' ? 'um valor que você deve' : 'um valor que lhe devem'}</b>.</p>
             </div>
           )}
         </div>
